@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE configuration
-        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-config.dtd">
 <!-- mybatis 主配置文件 -->
 <configuration>
     <!-- 配置环境，和spring整合后 environments配置将会被废除 -->
@@ -14,19 +11,13 @@
                 <property name="driver" value="com.mysql.jdbc.Driver"/>
                 <property name="url" value="jdbc:mysql://localhost:3306/ideal_mybatis"/>
                 <property name="username" value="root"/>
-                <property name="password" value="root"/>
+                <property name="password" value="root99"/>
             </dataSource>
         </environment>
     </environments>
-
+    ​
     <!-- 指定映射配置文件的位置 -->
-
-<!--        无注解-->
-<!--    <mappers>-->
-<!--        <mapper resource="cn/ideal/dao/UserMapper.xml"/>-->
-<!--    </mappers>-->
-
     <mappers>
-        <mapper class="cn.ideal.mapper.UserMapper"/>
+        <mapper resource="cn/ideal/mapper/UserMapper.xml"/>
     </mappers>
 </configuration>
