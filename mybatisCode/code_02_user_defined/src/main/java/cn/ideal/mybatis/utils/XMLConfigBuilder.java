@@ -104,7 +104,7 @@ public class XMLConfigBuilder {
                     //                    cfg.setMappers(mappers);
                 }
             }
-            System.out.println("333" );
+            System.out.println("444" );
             //返回Configuration
             return cfg;
         }catch(Exception e){

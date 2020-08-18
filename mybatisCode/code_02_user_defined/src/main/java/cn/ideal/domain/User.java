@@ -6,7 +6,7 @@ import java.util.Date;
 public class User implements Serializable {
     private Integer id;
     private String username;
-    private Integer telephone;
+    private String telephone;
     private Date birthday;
     private String gender;
     private String address;
@@ -27,11 +27,11 @@ public class User implements Serializable {
         this.username = username;
     }
 
-    public Integer getTelephone() {
+    public String getTelephone() {
         return telephone;
     }
 
-    public void setTelephone(Integer telephone) {
+    public void setTelephone(String telephone) {
         this.telephone = telephone;
     }
 

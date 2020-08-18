@@ -36,10 +36,12 @@ public class Executor {
                 ResultSetMetaData rsmd = rs.getMetaData();
                 //取出总列数
                 int columnCount = rsmd.getColumnCount();
+
                 //遍历总列数
                 for (int i = 1; i <= columnCount; i++) {
                     //获取每列的名称，列名的序号是从1开始的
                     String columnName = rsmd.getColumnName(i);
+                    System.out.println(columnName);
                     //根据得到列名，获取每列的值
                     Object columnValue = rs.getObject(columnName);
                     //给obj赋值：使用Java内省机制（借助PropertyDescriptor实现属性的封装）
@@ -49,6 +51,7 @@ public class Executor {
                     //把获取的列的值，给对象赋值
                     writeMethod.invoke(obj,columnValue);
                 }
+
                 //把赋好值的对象加入到集合中
                 list.add(obj);
             }
