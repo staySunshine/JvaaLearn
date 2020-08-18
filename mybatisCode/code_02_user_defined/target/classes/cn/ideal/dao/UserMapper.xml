@@ -3,4 +3,24 @@
     <select id="findAllUserInfo" resultType="cn.ideal.domain.User">
         select * from user
     </select>
+
+    <insert id="addUser" parameterType="cn.ideal.domain.User">
+        insert into user(username,telephone,birthday,gender,address)values(#{username},#{telephone},#{birthday},#{gender},#{address})
+    </insert>
+
+    <selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+        SELECT LAST_INSERT_ID();
+    </selectKey>
+
+    <update id="updateUser" parameterType="cn.ideal.domain.User">
+        update user set username=#{username},telephone=#{telephone},birthday=#{birthday},gender=#{gender},address=#{address} where id=#{id}
+    </update>
+
+    <delete id="deleteUser" parameterType="java.lang.Integer">
+        delete from user where id=#{id}
+    </delete>
+
+    <select id="findByName" parameterType="java.lang.String" resultType="cn.ideal.domain.User">
+        select * from user where username like #{username}
+    </select>
 </mapper>

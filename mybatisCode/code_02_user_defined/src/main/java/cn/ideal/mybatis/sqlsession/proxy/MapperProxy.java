@@ -34,6 +34,9 @@ public class MapperProxy implements InvocationHandler {
         String className = method.getDeclaringClass().getName();
         //组合key
         String key = className + "." + methodName;
+        System.out.println(key);
+        System.out.println("mappers size is " + mappers.size());
+        System.out.println(mappers.keySet());
         //获取mappers中的Mapper对象
         Mapper mapper = mappers.get(key);
         //判断是否有mapper

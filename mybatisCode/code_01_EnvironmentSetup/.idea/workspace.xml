@@ -3,6 +3,20 @@
   <component name="ChangeListManager">
     <list default="true" id="0c8bc827-d2f6-4e94-b16a-7abf94936fef" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/cn/ideal/dao/UserMapper.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/cn/ideal/dao/UserMapper.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/cn/ideal/domain/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/cn/ideal/domain/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/cn/ideal/mapper/UserMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/cn/ideal/mapper/UserMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/cn/ideal/test/MyBatisTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/cn/ideal/test/MyBatisTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/test-classes/cn/ideal/test/MyBatisTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/test-classes/cn/ideal/test/MyBatisTest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../code_02_user_defined/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../code_02_user_defined/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../code_02_user_defined/src/main/java/cn/ideal/dao/UserMapper.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../code_02_user_defined/src/main/java/cn/ideal/dao/UserMapper.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../code_02_user_defined/src/main/java/cn/ideal/mapper/UserMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/../code_02_user_defined/src/main/java/cn/ideal/mapper/UserMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../code_02_user_defined/src/main/java/cn/ideal/mybatis/sqlsession/proxy/MapperProxy.java" beforeDir="false" afterPath="$PROJECT_DIR$/../code_02_user_defined/src/main/java/cn/ideal/mybatis/sqlsession/proxy/MapperProxy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../code_02_user_defined/src/test/java/cn/ideal/test/MyBatisTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/../code_02_user_defined/src/test/java/cn/ideal/test/MyBatisTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../code_02_user_defined/target/classes/cn/ideal/dao/UserMapper.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../code_02_user_defined/target/classes/cn/ideal/dao/UserMapper.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../code_02_user_defined/target/classes/cn/ideal/mapper/UserMapper.class" beforeDir="false" afterPath="$PROJECT_DIR$/../code_02_user_defined/target/classes/cn/ideal/mapper/UserMapper.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../code_02_user_defined/target/classes/cn/ideal/mybatis/sqlsession/proxy/MapperProxy.class" beforeDir="false" afterPath="$PROJECT_DIR$/../code_02_user_defined/target/classes/cn/ideal/mybatis/sqlsession/proxy/MapperProxy.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../code_02_user_defined/target/test-classes/cn/ideal/test/MyBatisTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/../code_02_user_defined/target/test-classes/cn/ideal/test/MyBatisTest.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -69,9 +83,9 @@
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../code_02_user_defined" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="JUnit.MyBatisTest.testAddUser">
     <configuration name="MyBatisTest" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="cn.ideal.test.MyBatisTest" />
       <module name="code_01_EnvironmentSetup" />
@@ -85,8 +99,25 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="MyBatisTest.testAddUser" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="code_01_EnvironmentSetup" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="cn.ideal.test.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="cn.ideal.test" />
+      <option name="MAIN_CLASS_NAME" value="cn.ideal.test.MyBatisTest" />
+      <option name="METHOD_NAME" value="testAddUser" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="JUnit.MyBatisTest.testAddUser" />
         <item itemvalue="Application.MyBatisTest" />
       </list>
     </recent_temporary>
@@ -128,6 +159,7 @@
       <workItem from="1597670141652" duration="2150000" />
       <workItem from="1597676283650" duration="929000" />
       <workItem from="1597749291633" duration="176000" />
+      <workItem from="1597762273108" duration="904000" />
     </task>
     <servers />
   </component>
