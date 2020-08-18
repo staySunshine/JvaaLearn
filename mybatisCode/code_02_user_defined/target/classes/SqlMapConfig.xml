@@ -11,13 +11,13 @@
                 <property name="driver" value="com.mysql.jdbc.Driver"/>
                 <property name="url" value="jdbc:mysql://localhost:3306/ideal_mybatis"/>
                 <property name="username" value="root"/>
-                <property name="password" value="root99"/>
+                <property name="password" value="root"/>
             </dataSource>
         </environment>
     </environments>
     ​
     <!-- 指定映射配置文件的位置 -->
     <mappers>
-        <mapper resource="cn/ideal/mapper/UserMapper.xml"/>
+        <mapper resource="cn/ideal/dao/UserMapper.xml"/>
     </mappers>
 </configuration>

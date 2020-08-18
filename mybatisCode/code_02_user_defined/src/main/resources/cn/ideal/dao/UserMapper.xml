@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mapper namespace="cn.ideal.mapper.UserMapper">
+    <select id="findAllUserInfo" resultType="cn.ideal.domain.User">
+        select * from user
+    </select>
+</mapper>

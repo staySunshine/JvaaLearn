@@ -49,29 +49,35 @@ public class XMLConfigBuilder {
                     //表示驱动
                     //获取property标签value属性的值
                     String driver = propertyElement.attributeValue("value");
+                    System.out.println("driver is " + driver );
                     cfg.setDriver(driver);
                 }
                 if("url".equals(name)){
                     //表示连接字符串
                     //获取property标签value属性的值
                     String url = propertyElement.attributeValue("value");
+                    System.out.println("url is " + url );
                     cfg.setUrl(url);
                 }
                 if("username".equals(name)){
                     //表示用户名
                     //获取property标签value属性的值
                     String username = propertyElement.attributeValue("value");
+                    System.out.println("username is " + username );
                     cfg.setUsername(username);
                 }
                 if("password".equals(name)){
                     //表示密码
                     //获取property标签value属性的值
                     String password = propertyElement.attributeValue("value");
+                    System.out.println("password is " + password );
                     cfg.setPassword(password);
                 }
             }
+            System.out.println("111" );
             //取出mappers中的所有mapper标签，判断他们使用了resource还是class属性
             List<Element> mapperElements = root.selectNodes("//mappers/mapper");
+
             //遍历集合
             for(Element mapperElement : mapperElements){
                 //判断mapperElement使用的是哪个属性
@@ -81,8 +87,10 @@ public class XMLConfigBuilder {
                     //表示有resource属性，用的是XML
                     //取出属性的值
                     String mapperPath = attribute.getValue();//获取属性的值"com/itheima/dao/IUserDao.xml"
+                    System.out.println("mapperPath is " + mapperPath );
                     //把映射配置文件的内容获取出来，封装成一个map
                     Map<String, Mapper> mappers = loadMapperConfiguration(mapperPath);
+                    System.out.println("333" );
                     //给configuration中的mappers赋值
                     cfg.setMappers(mappers);
                 }else{
@@ -96,6 +104,7 @@ public class XMLConfigBuilder {
                     //                    cfg.setMappers(mappers);
                 }
             }
+            System.out.println("333" );
             //返回Configuration
             return cfg;
         }catch(Exception e){
@@ -123,11 +132,16 @@ public class XMLConfigBuilder {
             Map<String,Mapper> mappers = new HashMap<String,Mapper>();
             //1.根据路径获取字节输入流
             in = Resources.getResourceAsStream(mapperPath);
+            if(in == null){
+                System.out.println("in is null");
+            }
             //2.根据字节输入流获取Document对象
             SAXReader reader = new SAXReader();
             Document document = reader.read(in);
+            System.out.println("222" );
             //3.获取根节点
             Element root = document.getRootElement();
+
             //4.获取根节点的namespace属性取值
             String namespace = root.attributeValue("namespace");//是组成map中key的部分
             //5.获取所有的select节点

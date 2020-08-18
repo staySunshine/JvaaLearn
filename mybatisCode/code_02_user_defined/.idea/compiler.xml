@@ -9,5 +9,6 @@
         <module name="code_02_user_defined" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel target="8" />
   </component>
 </project>
