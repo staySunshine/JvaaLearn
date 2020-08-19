@@ -1,5 +1,6 @@
 package cn.ideal.mapper;
 
+import cn.ideal.domain.QueryUserVo;
 import cn.ideal.domain.User;
 import org.apache.ibatis.annotations.Select;
 
@@ -41,4 +42,17 @@ public interface UserMapper {
      * @return
      */
     List<User> findByName(String username);
+
+    /**
+     * 根据条件查询
+     * @return
+     */
+    List<User> findUserByCondition(User user);
+
+    /**
+     * 根据QueryUserVo中提供的id集合，查询用户信息
+     * @param vo
+     * @return
+     */
+    List<User> findUserInIds(QueryUserVo vo);
 }

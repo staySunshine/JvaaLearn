@@ -1,5 +1,6 @@
 package cn.ideal.test;
 
+import cn.ideal.domain.QueryUserVo;
 import cn.ideal.domain.User;
 import cn.ideal.mapper.UserMapper;
 import org.apache.ibatis.io.Resources;
@@ -11,6 +12,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -109,6 +111,41 @@ public class MyBatisTest {
             System.out.println(user);
         }
     }
+    /**
+     * 根据条件查询
+     * @throws Exception
+     */
+    @Test
+    public void testFindByCondition() throws Exception {
+        User user = new User();
+        user.setUsername("李华");
+        user.setGender("男");
+
+        List<User> users = userMapper.findUserByCondition(user);
+        for (User u : users) {
+            System.out.println(u);
+        }
+    }
+
+    /**
+     * 根据QueryUserVo中提供的id集合，查询用户信息
+     * @throws Exception
+     */
+    @Test
+    public void testfindUserInIds() throws Exception{
+        QueryUserVo vo = new QueryUserVo();
+        List<Integer> list = new ArrayList<Integer>();
+        list.add(1);
+        list.add(2);
+        list.add(3);
+        vo.setIds(list);
+
+        List<User> users = userMapper.findUserInIds(vo);
+        for (User u : users){
+            System.out.println(u);
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         /*
         //读取配置文件

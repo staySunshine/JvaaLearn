@@ -26,4 +26,27 @@
     <select id="findByName" parameterType="java.lang.String" resultType="cn.ideal.domain.User">
         select * from user where username like #{username}
     </select>
+
+    <select id="findUserByCondition" resultType="cn.ideal.domain.User" parameterType="cn.ideal.domain.User">
+        select  * from user
+        <where>
+            <if test="username != null">
+                and username = #{username}
+            </if>
+            <if test="gender != null">
+                and gender = #{gender}
+            </if>
+        </where>
+    </select>
+
+    <select id="findUserInIds" resultType="cn.ideal.domain.User" parameterType="cn.ideal.domain.QueryUserVo">
+        select * from user
+        <where>
+            <if test="ids != null and ids.size() > 0">
+                <foreach collection="ids" open="and id in (" close=")" item="uid" separator=",">
+                    #{uid}
+                </foreach>
+            </if>
+        </where>
+    </select>
 </mapper>
