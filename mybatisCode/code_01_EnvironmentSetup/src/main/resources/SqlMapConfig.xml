@@ -12,7 +12,7 @@
             <!-- 数据库连接池 -->
             <dataSource type="POOLED">
                 <property name="driver" value="com.mysql.jdbc.Driver"/>
-                <property name="url" value="jdbc:mysql://localhost:3306/ideal_mybatis"/>
+                <property name="url" value="jdbc:mysql://localhost:3306/ideal_mybatis?characterEncoding=utf8&amp;useSSL=false"/>
                 <property name="username" value="root"/>
                 <property name="password" value="root"/>
             </dataSource>
@@ -22,11 +22,11 @@
     <!-- 指定映射配置文件的位置 -->
 
 <!--        无注解-->
-<!--    <mappers>-->
-<!--        <mapper resource="cn/ideal/dao/UserMapper.xml"/>-->
-<!--    </mappers>-->
-
     <mappers>
-        <mapper class="cn.ideal.mapper.UserMapper"/>
+        <mapper resource="cn/ideal/dao/UserMapper.xml"/>
     </mappers>
+
+<!--    <mappers>-->
+<!--        <mapper class="cn.ideal.mapper.UserMapper"/>-->
+<!--    </mappers>-->
 </configuration>

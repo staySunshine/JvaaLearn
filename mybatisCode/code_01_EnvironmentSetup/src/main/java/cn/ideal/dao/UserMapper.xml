@@ -8,7 +8,7 @@
     </select>
 
     <insert id="addUser" parameterType="cn.ideal.domain.User">
-        insert into user(username,telephone,birthday,gender,address)values(#{username},#{telephone},#{birthday},#{gender},#{address})
+        insert into user(id,username,telephone,birthday,gender,address)  values(#{id},#{username},#{telephone},#{birthday},#{gender},#{address})
     </insert>
 
 <!--    <selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">-->

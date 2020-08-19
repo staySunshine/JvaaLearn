@@ -32,6 +32,7 @@ public class MyBatisTest {
     }
     @After
     public void destroy() throws Exception{
+        sqlSession.commit();
         sqlSession.close();
         inputStream.close();
     }
@@ -39,10 +40,11 @@ public class MyBatisTest {
      * 测试新增用户
      * @throws Exception
      */
-    /*
+/*
     @Test
     public void testAddUser() throws Exception{
         User user = new User();
+        user.setId(3);
         user.setUsername("增加");
         user.setTelephone("12266668888");
         user.setBirthday(new Date());
@@ -75,7 +77,7 @@ public class MyBatisTest {
     @Test
     public void testUpdateUser() throws Exception{
         User user = new User();
-        user.setId(17);
+        user.setId(5);
         user.setUsername("修改");
         user.setTelephone("18899999999");
         user.setBirthday(new Date());
@@ -93,7 +95,7 @@ public class MyBatisTest {
     @Test
     public void testDeleteUser() throws Exception{
         //执行方法
-        userMapper.deleteUser(17);
+        userMapper.deleteUser(5);
     }
 
     /**
