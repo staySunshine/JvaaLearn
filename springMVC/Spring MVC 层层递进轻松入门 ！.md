@@ -133,3 +133,5 @@ Struts 也是一款基于 MVC 这种在开发模式的 JavaEE框架，近些年�
 - JSR 303 – Bean Validation (后台通用参数校验)
 
 ⑤ Struts2 的 OGNL 表达式使页面的开发效率相比 Spring MVC 更高一点，但是执行效率对于 JSTL 也没有很明显的提升
+
+### **浅尝 Spring MVC**
