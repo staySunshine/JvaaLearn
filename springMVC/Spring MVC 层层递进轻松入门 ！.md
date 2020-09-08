@@ -135,3 +135,258 @@ Struts 也是一款基于 MVC 这种在开发模式的 JavaEE框架，近些年�
 ⑤ Struts2 的 OGNL 表达式使页面的开发效率相比 Spring MVC 更高一点，但是执行效率对于 JSTL 也没有很明显的提升
 
 ### **浅尝 Spring MVC**
+
+#### **(一) 搭建开发环境**
+
+##### **(1) 创建项目**
+
+① 创建Maven项目 --> ② 选择JDK版本 --> ③ 勾选 create from archetype 即使用骨架创建项目 --> ④ 选择 maven-archetype-webapp 创建出一个web项目
+
+![image-20200908214108072](Spring MVC 层层递进轻松入门 ！.assets/image-20200908214108072.png)
+
+然后指定基本信息，点击下一步
+
+![image-20200908214247946](Spring MVC 层层递进轻松入门 ！.assets/image-20200908214247946.png)
+
+但是，由于创建 maven archetype 的原因，在创建时，会执行 mvn archetype:generate这个命令，这样就需要指定一个 archetype-catalog.xml 文件，命令中参数 -DarchetypeCatalog 的值有三种
+
+- remote：从Maven远程中央仓库获取 archetypeCatalog（默认的）
+- internal：从 maven-archetype-plugin 内置的 archetypeCatalog 文件获取
+- local：本地的 archetypeCatalog 文件
+
+我们需要做的就是添加这样一组键值对，就可以加快创建项目的速度
+
+- DarchetypeCatalog
+- internal
+
+![image-20200908214308897](Spring MVC 层层递进轻松入门 ！.assets/image-20200908214308897.png)
+
+这里没什么好说的，基本不需要更改，继续下一步
+
+![image-20200908214409265](Spring MVC 层层递进轻松入门 ！.assets/image-20200908214409265.png)
+
+#### **(2) 修改pom文件**
+
+将版本从1.7改为1.8，接着又在 dependencies 中引入我们需要的一些 jar 包
+
+定义 `<spring.version>5.0.2.RELEASE</spring.version>` 这样一个标签对，在下面就可以引用，这样相比于直接将版本信息写到每一个 dependencie 中，更利于后期的维护，方便更换版本，这种方式叫做锁定版本
+
+```xml
+ <?xml version="1.0" encoding="UTF-8"?>
+ 
+ <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+ 
+   <groupId>cn.ideal</groupId>
+   <artifactId>spring_mvc_01_basic</artifactId>
+   <version>1.0-SNAPSHOT</version>
+   <packaging>war</packaging>
+ 
+   <name>spring_mvc_01_basic Maven Webapp</name>
+   <!-- FIXME change it to the project's website -->
+   <url>http://www.example.com</url>
+ 
+   <properties>
+     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+     <maven.compiler.source>1.8</maven.compiler.source>
+     <maven.compiler.target>1.8</maven.compiler.target>
+     <spring.version>5.0.2.RELEASE</spring.version>
+   </properties>
+ 
+   <dependencies>
+     <dependency>
+       <groupId>org.springframework</groupId>
+       <artifactId>spring-context</artifactId>
+       <version>${spring.version}</version>
+     </dependency>
+ 
+     <dependency>
+       <groupId>org.springframework</groupId>
+       <artifactId>spring-web</artifactId>
+       <version>${spring.version}</version>
+     </dependency>
+ 
+     <dependency>
+       <groupId>org.springframework</groupId>
+       <artifactId>spring-webmvc</artifactId>
+       <version>${spring.version}</version>
+     </dependency>
+ 
+     <dependency>
+       <groupId>javax.servlet</groupId>
+       <artifactId>servlet-api</artifactId>
+       <version>2.5</version>
+       <scope>provided</scope>
+     </dependency>
+ 
+     <dependency>
+       <groupId>javax.servlet.jsp</groupId>
+       <artifactId>jsp-api</artifactId>
+       <version>2.0</version>
+       <scope>provided</scope>
+     </dependency>
+ 
+     <dependency>
+       <groupId>junit</groupId>
+       <artifactId>junit</artifactId>
+       <version>4.11</version>
+       <scope>test</scope>
+     </dependency>
+ 
+   </dependencies>
+ 
+ 
+   <build>
+     <finalName>spring_mvc_01_basic</finalName>
+     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+       <plugins>
+         <plugin>
+           <artifactId>maven-clean-plugin</artifactId>
+           <version>3.1.0</version>
+         </plugin>
+         <!-- see http://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_war_packaging -->
+         <plugin>
+           <artifactId>maven-resources-plugin</artifactId>
+           <version>3.0.2</version>
+         </plugin>
+         <plugin>
+           <artifactId>maven-compiler-plugin</artifactId>
+           <version>3.8.0</version>
+         </plugin>
+         <plugin>
+           <artifactId>maven-surefire-plugin</artifactId>
+           <version>2.22.1</version>
+         </plugin>
+         <plugin>
+           <artifactId>maven-war-plugin</artifactId>
+           <version>3.2.2</version>
+         </plugin>
+         <plugin>
+           <artifactId>maven-install-plugin</artifactId>
+           <version>2.5.2</version>
+         </plugin>
+         <plugin>
+           <artifactId>maven-deploy-plugin</artifactId>
+           <version>2.8.2</version>
+         </plugin>
+       </plugins>
+     </pluginManagement>
+   </build>
+ </project>
+```
+
+#### **(3) 目录结构**
+
+刚创建好的项目中，main文件夹下是空的，我们需要创建出 java 以及 resources 两个文件夹，并且分别设置为，源代码根目录 以及 资源根目录，设置方式如下图
+
+![image-20200908214538902](Spring MVC 层层递进轻松入门 ！.assets/image-20200908214538902.png)
+
+#### **(二) 编写入门程序**
+
+##### **(1) 配置核心控制器**
+
+在以前 JavaWeb 阶段中，我们都很清楚，前端发出的请求，都会被映射到 Web.xml 中，然后匹配到对应的 Servlet 中，然后调用对应的 Servlet 类 来处理这个请求
+
+由于现在我们使用了 Spring MVC，所以这些请求，我们就交给 Spring MVC 进行管理，所以需要在工程 webapp-WEB-INF 中找到 web.xml 进，在其中配置核心控制器，也就是 DispatcherServelt
+
+`<servlet ></servlet >`标签中指定了一个实现类为 DispatcherServelt ，名称为 dispatcherServlet 的 servlet 配置
+
+`<servlet-mapping></servlet-mapping>`标签中则指定了 dispatcherServlet 拦截请求的范围，使用 `/` 即代表所有请求都需要经过这里
+
+`<init-param></init-param>`标签对中放置 DispatcherServelt 所需要的初始化参数，配置的是 contextConfigLocation 上下文参数变量，其加载的配置文件为编译目录下的 springmvc.xml (下面创建)
+
+##### **(2) 创建核心配置文件**
+
+在这里，一个是开启扫描，以及开启注解，还有就是配置视图解析器，它的作用就是执行方法后，根据返回的信息，来加载相应的界面，并且绑定反馈数据
+
+```xml
+ <?xml version="1.0" encoding="UTF-8"?>
+ <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:mvc="http://www.springframework.org/schema/mvc"
+        xmlns:context="http://www.springframework.org/schema/context"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+         http://www.springframework.org/schema/beans
+         http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/mvc
+         http://www.springframework.org/schema/mvc/spring-mvc.xsd
+         http://www.springframework.org/schema/context
+         http://www.springframework.org/schema/context/spring-context.xsd">
+ 
+     <!-- 配置spring创建容器时要扫描的包-->
+     <context:component-scan base-package="cn.ideal"></context:component-scan>
+ 
+     <!-- 配置视图解析器-->
+     <bean id="viewResolver"
+           class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+         <property name="prefix" value="/WEB-INF/pages/"></property>
+         <property name="suffix" value=".jsp"></property>
+     </bean>
+ 
+     <!-- 配置spring开启注解mvc的支持 -->
+     <mvc:annotation-driven></mvc:annotation-driven>
+ </beans>
+ 
+```
+
+特别说明：一般开发我们都需要写上这个标签，即使或许现在还没怎么体现出来
+
+##### **(3) 编写控制类**
+
+```java
+ package cn.ideal.controller;
+ 
+ import org.springframework.stereotype.Controller;
+ import org.springframework.web.bind.annotation.RequestMapping;
+ 
+ @Controller
+ public class ControllerDemo {
+     @RequestMapping(path = "/test")
+     public String methodTest(){
+         System.out.println("这是Controller测试方法");
+         return "testSuccess";
+     }
+ }
+```
+
+##### **(4) 编写页面**
+
+**index.jsp**
+
+写一个超链接，去请求test这个路径，也就是指向到了 Controller 下的 methodTest() 方法
+
+```jsp
+ <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+ <html>
+ <head>
+     <title>Title</title>
+ </head>
+ <body>
+     <h3>这是主页面</h3>
+     <a href="test">访问test试试</a>
+ </body>
+ </html>
+```
+
+**WEB-INF -> pages**
+
+**testSuccess.jsp**
+
+```jsp
+ <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+ <html>
+ <head>
+     <title>Title</title>
+ </head>
+ <body>
+     <h3>跳转成功哈</h3>
+ </body>
+ </html>
+```
+
+##### **(5) 配置 Tomcat**
+
+我这里，配置了本地的tomcat，以及项目名称
+
+![image-20200908225548242](Spring MVC 层层递进轻松入门 ！.assets/image-20200908225548242.png)
