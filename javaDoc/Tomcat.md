@@ -2,31 +2,31 @@
 
 ##### 访问192.168.112.1:8080/demo1/index.html
 
-![1595574058862](E:\Learn\javaLearn\javaDoc\Tomcat.assets\1595574058862.png)
+![1595574058862](.\Tomcat.assets\1595574058862.png)
 
-![1595574128202](E:\Learn\javaLearn\javaDoc\Tomcat.assets\1595574128202.png)
+![1595574128202](.\Tomcat.assets\1595574128202.png)
 
-![1595574167948](E:\Learn\javaLearn\javaDoc\Tomcat.assets\1595574167948.png)
+![1595574167948](.\Tomcat.assets\1595574167948.png)
 
 #####  **我们用Java开发的Web应用只是一个半成品，类似于一个插件**，而服务器则像一个收发器 
 
-![1595574199041](E:\Learn\javaLearn\javaDoc\Tomcat.assets\1595574199041.png)
+![1595574199041](.\Tomcat.assets\1595574199041.png)
 
 #### **Tomcat架构**
 
 #####  Tomcat目录 
 
-![1595574391922](E:\Learn\javaLearn\javaDoc\Tomcat.assets\1595574391922.png)
+![1595574391922](.\Tomcat.assets\1595574391922.png)
 
 #####  Tomcat的架构 
 
-![1595574429153](E:\Learn\javaLearn\javaDoc\Tomcat.assets\1595574429153.png)
+![1595574429153](.\Tomcat.assets\1595574429153.png)
 
 #####  Tomcat的一个配置文件(Server.xml) 
 
-![1595574570418](E:\Learn\javaLearn\javaDoc\Tomcat.assets\1595574570418.png)
+![1595574570418](.\Tomcat.assets\1595574570418.png)
 
-![1595574586452](E:\Learn\javaLearn\javaDoc\Tomcat.assets\1595574586452.png)
+![1595574586452](.\Tomcat.assets\1595574586452.png)
 
 #####  xml里的配置 解释 
 
@@ -40,3 +40,4 @@
 - 与Connector平级的还有个<Engine>（Tomcat引擎），也就是说<Service>有两个孩子，小儿子是<Connector>，大儿子是<Engine>。Connector的作用说穿了就是监听端口，如果用户访问地址是“localhost:8080/xx/xx”，那就由监听8080端口的Connector负责，如果是"[https://www.baidu.com](https://link.zhihu.com/?target=https%3A//www.baidu.com/)"，那么就是443端口处理。其实Connector也不处理实际业务，它只是个孩子。但**它会负责把客人（请求）带到哥哥Engine那，然后Engine会处理。
 
 - <Engine>下面有个Host，代表主机。
+
