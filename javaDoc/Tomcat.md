@@ -41,3 +41,51 @@
 
 - <Engine>下面有个Host，代表主机。
 
+![1599635491448](Tomcat.assets/1599635491448.png)
+
+![1599635509940](Tomcat.assets/1599635509940.png)
+
+ 我们知道，对于像Tomcat这样的Servlet容器来说，任何一个请求的背后肯定有个Servlet在默默处理： 
+
+![1599635803908](Tomcat.assets/1599635803908.png)
+
+所以这次也不例外，肯定也有对应的Servlet处理了本次请求。既然不是我们写的，那只能是Tomcat提供的。查看Tomcat下的conf目录，除了我们熟悉的Server.xml，还有个web.xml。
+
+![1599635822435](Tomcat.assets/1599635822435.png)
+
+ 不错，我们每个动态web工程都有个web.xml，而conf里的这个，是它们的“老爹”。它里面的配置，如果动态web工程没有覆盖，就会被“继承”下来。我们会发现，conf/web.xml里配置了一个DefaultServlet： 
+
+![1599636101661](Tomcat.assets/1599636101661.png)
+
+![1599636157899](Tomcat.assets/1599636157899.png)
+
+- JspServlet：JSP的卸妆师傅
+
+ 我们都知道JSP是“化了浓妆”的Servlet，但是好不容易伪装成了一个JSP，是谁帮它卸妆的呢？另外，大家仔细想想，一般来说JavaWeb阶段我们访问资源有三种“形式”： 
+
+```
+localhost:8080/demo/AServlet：很明显，我们手动写了一个AServlet处理它
+localhost:8080/demo/haha.html：虽然我们没写，但是Tomcat自己准备了DefaultServlet
+localhost:8080/demo/index.jsp：我擦，谁来处理？
+```
+
+对呀，细思恐极，这*.jsp的资源，谁来处理？其实就是JspServlet。它的作用简而言之就是：
+
+- 首先，根据请求路径找到JSP
+- 然后，将它“翻译成”Servlet
+
+
+
+刚才带大家看conf/web.xml时，我把它隐藏了，因为同时讲解DefaultServlet和JspServlet会比较乱。强烈建议大家现在暂停一下，打开本机的Tomcat找到conf/web.xml看一下。下面是JspServlet的配置：
+
+![1599636375059](Tomcat.assets/1599636375059.png)
+
+ 所以最后总结一下Tomcat处理请求的几种方式： 
+
+![1599636394669](Tomcat.assets/1599636394669.png)
+
+### **动手实现"Tomcat"**
+
+最后，还有个很无聊的问题留给大家思考：JavaSE阶段，我们无论做什么，都是上来先敲main()。学了JavaWeb后，我想问问，你有多久没敲main()了？她去哪了呢？
+
+![1599636495939](Tomcat.assets/1599636495939.png)
