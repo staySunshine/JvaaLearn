@@ -287,6 +287,10 @@ public class User implements Serializable {
 private transient Object[] elementData;
 ```
 
+参考资料：
+
+- [序列化和反序列化的底层实现原理是什么？ - CSDN博客](https://blog.csdn.net/xlgen157387/article/details/79840134)
+
 ### 常见的序列化协议有哪些
 
 - COM主要用于Windows平台，并没有真正实现跨平台，另外COM的序列化的原理利用了编译器中虚表，使得其学习成本巨大。
@@ -373,3 +377,132 @@ BIO模型中通过 **Socket** 和 **ServerSocket** 完成套接字通道的实�
 所以在读取数据较慢时（比如数据量大、网络传输慢等），大量并发的情况下，其他接入的消息，只能一直等待，这就是最大的弊端。
 
 *而后面即将介绍的NIO，就能解决这个难题。*
+
+### NIO
+
+NIO（官方：New IO），也叫Non-Block IO 是一种**同步非阻塞**的通信模式。
+
+**NIO 设计原理：**
+
+NIO相对于BIO来说一大进步。客户端和服务器之间通过Channel通信。NIO可以在Channel进行读写操作。这些Channel都会被注册在Selector多路复用器上。Selector通过一个线程不停的轮询这些Channel。找出已经准备就绪的Channel执行IO操作。 NIO 通过一个线程轮询，实现千万个客户端的请求，这就是非阻塞NIO的特点。
+
+1）**缓冲区Buffer**：它是NIO与BIO的一个重要区别。BIO是将数据直接写入或读取到Stream对象中。而NIO的数据操作都是在缓冲区中进行的。缓冲区实际上是一个数组。Buffer最常见的类型是ByteBuffer，另外还有CharBuffer，ShortBuffer，IntBuffer，LongBuffer，FloatBuffer，DoubleBuffer。
+
+2）**通道Channel**：和流不同，通道是双向的。NIO可以通过Channel进行数据的读，写和同时读写操作。通道分为两大类：一类是网络读写（SelectableChannel），一类是用于文件操作（FileChannel），我们使用的SocketChannel和ServerSocketChannel都是SelectableChannel的子类。
+
+3）**多路复用器Selector**：NIO编程的基础。多路复用器提供选择已经就绪的任务的能力。就是Selector会不断地轮询注册在其上的通道（Channel），如果某个通道处于就绪状态，会被Selector轮询出来，然后通过SelectionKey可以取得就绪的Channel集合，从而进行后续的IO操作。服务器端只要提供一个线程负责Selector的轮询，就可以接入成千上万个客户端，这就是JDK NIO库的巨大进步。
+
+小结：**NIO模型中通过SocketChannel和ServerSocketChannel完成套接字通道的实现。非阻塞/阻塞，同步，避免TCP建立连接使用三次握手带来的开销。**
+
+![1599707394750](04-Java-IO.assets/1599707394750.png)
+
+### AIO (NIO.2)
+
+- 异步非阻塞，服务器实现模式为一个有效请求一个线程，客户端的I/O请求都是由OS先完成了再通知服务器应用去启动线程进行处理.
+- AIO方式使用于连接数目多且连接比较长（重操作）的架构，比如**相册服务器**，充分调用OS参与并发操作，编程比较复杂，JDK7开始支持。
+
+AIO 并没有采用NIO的多路复用器，而是使用异步通道的概念。其read，write方法的返回类型都是Future对象。而Future模型是异步的，其核心思想是：去主函数等待时间。
+
+小结：**AIO模型中通过AsynchronousSocketChannel和AsynchronousServerSocketChannel完成套接字通道的实现。非阻塞，异步**。
+
+### 总结
+
+1. BIO模型中通过**Socket**和**ServerSocket**完成套接字通道实现。阻塞，同步，连接耗时。
+2. NIO模型中通过**SocketChannel**和**ServerSocketChannel**完成套接字通道实现。非阻塞/阻塞，同步，避免TCP建立连接使用三次握手带来的开销。
+3. AIO模型中通过**AsynchronousSocketChannel**和**AsynchronousServerSocketChannel**完成套接字通道实现。非阻塞，异步。
+
+![1599707463895](04-Java-IO.assets/1599707463895.png)
+
+ **另外，**I/O属于底层操作，需要操作系统支持，并发也需要操作系统的支持，所以性能方面不同操作系统差异会比较明显。 
+
+参考：
+
+- [Java BIO、NIO、AIO 学习-力量来源于赤诚的爱！-51CTO博客](http://blog.51cto.com/stevex/1284437)
+- [Netty序章之BIO NIO AIO演变 - JavaEE教程 - SegmentFault 思否](https://segmentfault.com/a/1190000012976683)
+- [Java 网络IO编程总结（BIO、NIO、AIO均含完整实例代码） - CSDN博客](https://blog.csdn.net/anxpp/article/details/51512200#t3)
+- [Java IO Tutorial](http://tutorials.jenkov.com/java-io/index.html)
+
+### 7、BIO，NIO，AIO区别
+
+- **BIO（同步阻塞）**：客户端和服务器连接需要三次握手，使用简单，但吞吐量小
+- **NIO（同步非阻塞）**：客户端与服务器通过Channel连接，采用多路复用器轮询注册的Channel。提高吞吐量和可靠性。
+- **AIO（异步非阻塞）**：NIO的升级版，采用异步通道实现异步通信，其read和write方法均是异步方法。
+
+### 8、Stock通信的伪代码实现流程
+
+1. 服务器绑定端口：server = new ServerSocket(PORT)
+2. 服务器阻塞监听：socket = server.accept()
+3. 服务器开启线程：new Thread(Handle handle)
+4. 服务器读写数据：BufferedReader PrintWriter
+5. 客户端绑定IP和PORT：new Socket(IP_ADDRESS, PORT)
+6. 客户端传输接收数据：BufferedReader PrintWriter
+
+### 9、网络操作
+
+Java 中的网络支持：
+
+- InetAddress：用于表示网络上的硬件资源，即 IP 地址；
+- URL：统一资源定位符；
+- Sockets：使用 TCP 协议实现网络通信；
+- Datagram：使用 UDP 协议实现网络通信。
+
+#### InetAddress
+
+ 没有公有构造函数，只能通过静态方法来创建实例。 
+
+```java
+InetAddress.getByName(String host);
+InetAddress.getByAddress(byte[] address);
+```
+
+#### URL
+
+ 可以直接从 URL 中读取字节流数据。 
+
+```java
+public static void main(String[] args) throws IOException
+{
+    URL url = new URL("http://www.baidu.com");
+    // 字节流
+    InputStream is = url.openStream();
+    // 字符流
+    InputStreamReader isr = new InputStreamReader(is, "utf-8");
+    BufferedReader br = new BufferedReader(isr);
+    String line = br.readLine();
+    while (line != null) {
+        System.out.println(line);
+        line = br.readLine();
+    }
+    br.close();
+}
+```
+
+#### Sockets
+
+- ServerSocket：服务器端类
+- Socket：客户端类
+- 服务器和客户端通过 InputStream 和 OutputStream 进行输入输出。
+
+![1599707884919](04-Java-IO.assets/1599707884919.png)
+
+参考资料：
+
+- [使用TCP/IP的套接字（Socket）进行通信 - alps_01 - 博客园](https://www.cnblogs.com/alps/p/5672757.html)
+
+#### 什么是Socket？
+
+> TCP用主机的IP地址加上主机上的端口号作为TCP连接的端点，这种端点就叫做套接字（socket）或插口。
+>
+> 套接字用（IP地址：端口号）表示。
+
+Socket是进程通讯的一种方式，即调用这个网络库的一些API函数实现分布在不同主机的相关进程之间的数据交换。
+
+socket是网络编程的基础，本文用打电话来类比socket通信中建立TCP连接的过程。
+
+**socket函数**：表示你买了或者借了一部手机。 **bind函数**：告诉别人你的手机号码，让他们给你打电话。 **listen函数**：打开手机的铃声，而不是静音，这样有电话时可以立马反应。listen函数的第二个参数，最大连接数，表示最多有几个人可以同时拨打你的号码。不过我们的手机，最多只能有一个人打进来，要不然就提示占线。 **connect函数**：你的朋友知道了你的号码，通过这个号码来联系你。在他等待你回应的时候，不能做其他事情，所以connect函数是阻塞的。 **accept函数**：你听到了电话铃声，接电话，accept it！然后“喂”一声，你的朋友听到你的回应，知道电话已经打进去了。至此，一个TCP连接建立了。 **read/write函数**：连接建立后，TCP的两端可以互相收发消息，这时候的连接是全双工的。对应打电话中的电话煲。 **close函数**：通话完毕，一方说“我挂了”，另一方回应"你挂吧"，然后将连接终止。实际的close(sockfd)有些不同，它不止是终止连接，还把手机也归还，不在占有这部手机，就当是公用电话吧。
+
+注意到，上述连接是阻塞的，你一次只能响应一个用户的连接请求，但在实际网络编程中，一个服务器服务于多个客户，上述方案也就行不通了，怎么办？想一想10086，移动的声讯服务台，也是只有一个号码，它怎么能同时服务那么多人呢？可以这样理解，在你打电话到10086时，总服务台会让一个接线员来为你服务，而它自己却继续监听有没有新的电话接入。在网络编程中，这个过程类似于fork一个子进程，建立实际的通信连接，而主进程继续监听。10086的接线员是有限的，所以当连接的人数达到上线时，它会放首歌给你听，忙等待，直到有新的空闲接线员为止。 实际网络编程中，处理并发的方式还有select/poll/epoll等。
+
+下面是一个实际的socket通信过程：
+
+![1599708170590](04-Java-IO.assets/1599708170590.png)
