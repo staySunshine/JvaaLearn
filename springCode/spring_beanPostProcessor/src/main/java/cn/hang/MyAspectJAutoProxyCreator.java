@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
 
-@Component
+//@Component
 public class MyAspectJAutoProxyCreator implements BeanPostProcessor {
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
         return bean;
