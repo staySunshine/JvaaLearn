@@ -1,17 +1,19 @@
 package cn.xie.sb_properties;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
 @Component
 @PropertySource("classpath:book.properties")
+@ConfigurationProperties(prefix = "book")
 public class Book {
-    @Value("${book.id}")
+//    @Value("${book.id}")
     private Long id;
-    @Value("${book.name}")
+//    @Value("${book.name}")
     private String name;
-    @Value("${book.author}")
+//    @Value("${book.author}")
     private String author;
 
     public Long getId() {

@@ -1,0 +1,11 @@
+server:
+  port: 8081
+  servlet:
+    context-path: /jayboy
+redis:
+  port: 6379
+  hosts:
+    - 192.168.10.11
+    - 192.168.10.12
+    - 192.168.10.13
+    - 192.168.10.14
