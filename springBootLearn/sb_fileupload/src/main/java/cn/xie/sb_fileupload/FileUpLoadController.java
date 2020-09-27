@@ -20,7 +20,7 @@ public class FileUpLoadController {
     @PostMapping("/upload")
     public String upload(MultipartFile file, HttpServletRequest req){
         String format = simpleDateFormat.format(new Date());
-        String realPath = req.getServletContext().getRealPath("/img") + format;
+        String realPath = req.getServletContext().getRealPath("/static/img") + format;
         File folder = new File(realPath);
         if(!folder.exists()){
             folder.mkdirs();
@@ -30,6 +30,7 @@ public class FileUpLoadController {
 
         try {
             file.transferTo(new File(folder,newName));
+            System.out.println(realPath);
             String url = req.getScheme() + "://" + req.getServerName() + ":" + req.getServerPort() + "/img" + format + newName;
             return url;
         } catch (IOException e) {
