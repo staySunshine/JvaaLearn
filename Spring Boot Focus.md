@@ -7,7 +7,7 @@
 3. resources 目录下的 config 目录下
 4. resources 目录下
 
-![1602732769793](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1602732769793.png)
+![image-20201015205144461](Spring Boot Focus.assets/image-20201015205144461.png)
 
 ### 普通的属性注入
 
