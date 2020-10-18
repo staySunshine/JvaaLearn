@@ -669,3 +669,577 @@ public class QuartzConfig {
 ![1602755322427](Spring Boot Focus.assets/1602755322427.png)
 
  全部定义完成后，启动 Spring Boot 项目就可以看到定时任务的执行了。 
+
+## Spring Boot 中自定义 SpringMVC 配置
+
+### 概览
+
+首先我们需要明确，跟自定义 SpringMVC 相关的类和注解主要有如下四个：
+
+- WebMvcConfigurerAdapter
+- WebMvcConfigurer
+- WebMvcConfigurationSupport
+- @EnableWebMvc
+
+### WebMvcConfigurerAdapter
+
+我们先来看 WebMvcConfigurerAdapter，这个是在 Spring Boot 1.x 中我们自定义 SpringMVC 时继承的一个抽象类，这个抽象类本身是实现了 WebMvcConfigurer 接口，然后抽象类里边都是空方法，我们来看一下这个类的声明：
+
+```java
+public abstract class WebMvcConfigurerAdapter implements WebMvcConfigurer {
+    //各种 SpringMVC 配置的方法
+}
+```
+
+再来看看这个类的注释：
+
+```
+/**
+ * An implementation of {@link WebMvcConfigurer} with empty methods allowing
+ * subclasses to override only the methods they're interested in.
+ * @deprecated as of 5.0 {@link WebMvcConfigurer} has default methods (made
+ * possible by a Java 8 baseline) and can be implemented directly without the
+ * need for this adapter
+ */
+```
+
+ 这段注释关于这个类说的很明白了。同时我们也看到，从 Spring5 开始，由于我们要使用 Java8，而 Java8 中的接口允许存在 default 方法，因此官方建议我们直接实现 WebMvcConfigurer 接口，而不是继承 WebMvcConfigurerAdapter 。
+
+**也就是说，在 Spring Boot 1.x 的时代，如果我们需要自定义 SpringMVC 配置，直接继承 WebMvcConfigurerAdapter 类即可。**
+
+### WebMvcConfigurer
+
+根据上一小节的解释，小伙伴们已经明白了，WebMvcConfigurer 是我们在 Spring Boot 2.x 中实现自定义配置的方案。
+
+WebMvcConfigurer 是一个接口，接口中的方法和 WebMvcConfigurerAdapter 中定义的空方法其实一样，所以用法上来说，基本上没有差别，从 Spring Boot 1.x 切换到 Spring Boot 2.x ，只需要把继承类改成实现接口即可。
+
+### WebMvcConfigurationSupport
+
+WebMvcConfigurationSupport 类本身是没有问题的，我们自定义 SpringMVC 的配置是可以通过继承 WebMvcConfigurationSupport 来实现的。但是继承 WebMvcConfigurationSupport 这种操作我们一般只在 Java 配置的 SSM 项目中使用，Spring Boot 中基本上不会这么写，为什么呢？
+
+Spring Boot 中，SpringMVC 相关的自动化配置是在 WebMvcAutoConfiguration 配置类中实现的，那么我们来看看这个配置类的生效条件：
+
+```java
+@Configuration
+@ConditionalOnWebApplication(type = Type.SERVLET)
+@ConditionalOnClass({ Servlet.class, DispatcherServlet.class, WebMvcConfigurer.class })
+@ConditionalOnMissingBean(WebMvcConfigurationSupport.class)
+@AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE + 10)
+@AutoConfigureAfter({ DispatcherServletAutoConfiguration.class, TaskExecutionAutoConfiguration.class,
+		ValidationAutoConfiguration.class })
+public class WebMvcAutoConfiguration {
+}
+```
+
+我们从这个类的注解中可以看到，它的生效条件有一条，就是当不存在 WebMvcConfigurationSupport 的实例时，这个自动化配置才会生生效。因此，如果我们在 Spring Boot 中自定义 SpringMVC 配置时选择了继承 WebMvcConfigurationSupport，就会导致 Spring Boot 中 SpringMVC 的自动化配置失效。
+
+**Spring Boot 给我们提供了很多自动化配置，很多时候当我们修改这些配置的时候，并不是要全盘否定 Spring Boot 提供的自动化配置，我们可能只是针对某一个配置做出修改，其他的配置还是按照 Spring Boot 默认的自动化配置来，而继承 WebMvcConfigurationSupport 来实现对 SpringMVC 的配置会导致所有的 SpringMVC 自动化配置失效，因此，一般情况下我们不选择这种方案。**
+
+在 Java 搭建的 SSM 项目中，因为本身就没什么自动化配置，所以我们使用了继承 WebMvcConfigurationSupport。
+
+## @EnableWebMvc
+
+最后还有一个 @EnableWebMvc 注解，这个注解很好理解，它的作用就是启用 WebMvcConfigurationSupport。
+
+加了这个注解，就会自动导入 WebMvcConfigurationSupport，所以在 Spring Boot 中，我们也不建议使用 @EnableWebMvc 注解，因为它一样会导致 Spring Boot 中的 SpringMVC 自动化配置失效。
+
+### 总结
+
+不知道上面的解释小伙伴有没有看懂？我再简单总结一下：
+
+1. Spring Boot 1.x 中，自定义 SpringMVC 配置可以通过继承 WebMvcConfigurerAdapter 来实现。
+2. Spring Boot 2.x 中，自定义 SpringMVC 配置可以通过实现 WebMvcConfigurer 接口来完成。
+3. 如果在 Spring Boot 中使用继承 WebMvcConfigurationSupport 来实现自定义 SpringMVC 配置，或者在 Spring Boot 中使用了 @EnableWebMvc 注解，都会导致 Spring Boot 中默认的 SpringMVC 自动化配置失效。
+4. 在纯 Java 配置的 SSM 环境中，如果我们要自定义 SpringMVC 配置，有两种办法，第一种就是直接继承自 WebMvcConfigurationSupport 来完成 SpringMVC 配置，还有一种方案就是实现 WebMvcConfigurer 接口来完成自定义 SpringMVC 配置，如果使用第二种方式，则需要给 SpringMVC 的配置类上额外添加 @EnableWebMvc 注解，表示启用 WebMvcConfigurationSupport，这样配置才会生效。换句话说，在纯 Java 配置的 SSM 中，如果你需要自定义 SpringMVC 配置，你离不开 WebMvcConfigurationSupport ，所以在这种情况下建议通过继承 WebMvcConfigurationSupport 来实现自动化配置。
+
+## 整合 MyBatis
+
+### 工程创建
+
+首先创建一个基本的 Spring Boot 工程，添加 Web 依赖，MyBatis 依赖以及 MySQL 驱动依赖。
+
+添加Druid依赖，并且锁定MySQL驱动版本：
+
+```XML
+</dependency>
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid-spring-boot-starter</artifactId>
+    <version>1.1.10</version>
+</dependency>
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>5.1.28</version>
+    <scope>runtime</scope>
+</dependency>
+```
+
+### 基本用法
+
+首先是在 application.properties 中配置数据库的基本信息：
+
+```properties
+spring.datasource.url=jdbc:mysql:///test01?useUnicode=true&characterEncoding=utf-8
+spring.datasource.username=root
+spring.datasource.password=root
+spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+```
+
+```java
+public interface UserMapper2 {
+    @Select("select * from user")
+    List<User> getAllUsers();
+
+    @Results({
+            @Result(property = "id", column = "id"),
+            @Result(property = "username", column = "u"),
+            @Result(property = "address", column = "a")
+    })
+    @Select("select username as u,address as a,id as id from user where id=#{id}")
+    User getUserById(Long id);
+
+    @Select("select * from user where username like concat('%',#{name},'%')")
+    List<User> getUsersByName(String name);
+
+    @Insert({"insert into user(username,address) values(#{username},#{address})"})
+    @SelectKey(statement = "select last_insert_id()", keyProperty = "id", before = false, resultType = Integer.class)
+    Integer addUser(User user);
+
+    @Update("update user set username=#{username},address=#{address} where id=#{id}")
+    Integer updateUserById(User user);
+
+    @Delete("delete from user where id=#{id}")
+    Integer deleteUserById(Integer id);
+}
+```
+
+这里是通过全注解的方式来写 SQL，不写 XML 文件。
+
+@Select、@Insert、@Update 以及 @Delete 四个注解分别对应 XML 中的 select、insert、update 以及 delete 标签，@Results 注解类似于 XML 中的 ResultMap 映射文件（getUserById 方法给查询结果的字段取别名主要是向小伙伴们演示下 `@Results` 注解的用法）。
+
+另外使用 @SelectKey 注解可以实现主键回填的功能，即当数据插入成功后，插入成功的数据 id 会赋值到 user 对象的id 属性上。
+
+UserMapper2 创建好之后，还要配置 mapper 扫描，有两种方式，一种是直接在 UserMapper2 上面添加 `@Mapper` 注解，这种方式有一个弊端就是所有的 Mapper 都要手动添加，要是落下一个就会报错，还有一个一劳永逸的办法就是直接在启动类上添加 Mapper 扫描，如下：
+
+```java
+@SpringBootApplication
+@MapperScan(basePackages = "org.javaboy.mybatis.mapper")
+public class MybatisApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(MybatisApplication.class, args);
+    }
+}
+```
+
+### mapper 映射
+
+在 XML 中写 SQL，例如创建一个 UserMapper，如下：
+
+```java
+public interface UserMapper {
+    List<User> getAllUser();
+
+    Integer addUser(User user);
+
+    Integer updateUserById(User user);
+
+    Integer deleteUserById(Integer id);
+}
+```
+
+然后创建 UserMapper.xml 文件，如下：
+
+```java
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-21-mapper.dtd">
+<mapper namespace="org.javaboy.mybatis.mapper.UserMapper">
+    <select id="getAllUser" resultType="org.javaboy.mybatis.model.User">
+        select * from t_user;
+    </select>
+    <insert id="addUser" parameterType="org.javaboy.mybatis.model.User">
+        insert into user (username,address) values (#{username},#{address});
+    </insert>
+    <update id="updateUserById" parameterType="org.javaboy.mybatis.model.User">
+        update user set username=#{username},address=#{address} where id=#{id}
+    </update>
+    <delete id="deleteUserById">
+        delete from user where id=#{id}
+    </delete>
+</mapper>
+```
+
+将接口中方法对应的 SQL 直接写在 XML 文件中。
+
+那么这个 UserMapper.xml 到底放在哪里呢？有两个位置可以放，第一个是直接放在 UserMapper 所在的包下面：
+
+![image-20201018225718878](Spring Boot Focus.assets/image-20201018225718878.png)
+
+放在这里的 UserMapper.xml 会被自动扫描到，但是有另外一个 Maven 带来的问题，就是 java 目录下的 xml 资源在项目打包时会被忽略掉，所以，如果 UserMapper.xml 放在包下，需要在 pom.xml 文件中再添加如下配置，避免打包时 java 目录下的 XML 文件被自动忽略掉：
+
+```xml
+<build>
+    <resources>
+        <resource>
+            <directory>src/main/java</directory>
+            <includes>
+                <include>**/*.xml</include>
+            </includes>
+        </resource>
+        <resource>
+            <directory>src/main/resources</directory>
+        </resource>
+    </resources>
+</build>
+```
+
+当然，UserMapper.xml 也可以直接放在 resources 目录下，这样就不用担心打包时被忽略了，但是放在 resources 目录下，必须创建和 Mapper 接口包目录相同的目录层级，这样才能确保打包后 XML 和 Mapper 接口又处于在一起，否则 XML 文件将不能被自动扫描，这个时候就需要添加额外配置。例如我在 resources 目录下创建 mapper 目录用来放 mapper 文件，如下：
+
+![image-20201018225846473](Spring Boot Focus.assets/image-20201018225846473.png)
+
+此时在 application.properties 中告诉 mybatis 去哪里扫描 mapper：
+
+```xml
+mybatis.mapper-locations=classpath:mapper/*.xml
+```
+
+如此配置之后，mapper 就可以正常使用了。**注意这种方式不需要在 pom.xml 文件中配置文件过滤。**
+
+### 原理分析
+
+在 SSM 整合中，开发者需要自己提供两个 Bean，一个SqlSessionFactoryBean ，还有一个是 MapperScannerConfigurer，在 Spring Boot 中，这两个东西虽然不用开发者自己提供了，但是并不意味着这两个 Bean 不需要了，在 `org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration` 类中，我们可以看到 Spring Boot 提供了这两个 Bean，部分源码如下：
+
+```java
+@org.springframework.context.annotation.Configuration
+@ConditionalOnClass({ SqlSessionFactory.class, SqlSessionFactoryBean.class })
+@ConditionalOnSingleCandidate(DataSource.class)
+@EnableConfigurationProperties(MybatisProperties.class)
+@AutoConfigureAfter(DataSourceAutoConfiguration.class)
+public class MybatisAutoConfiguration implements InitializingBean {
+
+  @Bean
+  @ConditionalOnMissingBean
+  public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+    SqlSessionFactoryBean factory = new SqlSessionFactoryBean();
+    factory.setDataSource(dataSource);
+    return factory.getObject();
+  }
+  @Bean
+  @ConditionalOnMissingBean
+  public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+    ExecutorType executorType = this.properties.getExecutorType();
+    if (executorType != null) {
+      return new SqlSessionTemplate(sqlSessionFactory, executorType);
+    } else {
+      return new SqlSessionTemplate(sqlSessionFactory);
+    }
+  }
+  @org.springframework.context.annotation.Configuration
+  @Import({ AutoConfiguredMapperScannerRegistrar.class })
+  @ConditionalOnMissingBean(MapperFactoryBean.class)
+  public static class MapperScannerRegistrarNotFoundConfiguration implements InitializingBean {
+
+    @Override
+    public void afterPropertiesSet() {
+      logger.debug("No {} found.", MapperFactoryBean.class.getName());
+    }
+  }
+}
+```
+
+从类上的注解可以看出，当当前类路径下存在 SqlSessionFactory、 SqlSessionFactoryBean 以及 DataSource 时，这里的配置才会生效，SqlSessionFactory 和 SqlTemplate 都被提供了。
+
+## 整合 MyBatis 多数据源
+
+### 多数据源配置
+
+首先在 application.properties 中配置数据库基本信息，然后提供两个 DataSource 即可，这里我再把代码贴出来，里边的道理条条框框的，大伙可以参考前面的文章，这里不再赘述。
+
+application.properties 中的配置：
+
+```pro
+spring.datasource.one.url=jdbc:mysql:///test01?useUnicode=true&characterEncoding=utf-8
+spring.datasource.one.username=root
+spring.datasource.one.password=root
+spring.datasource.one.type=com.alibaba.druid.pool.DruidDataSource
+
+spring.datasource.two.url=jdbc:mysql:///test02?useUnicode=true&characterEncoding=utf-8
+spring.datasource.two.username=root
+spring.datasource.two.password=root
+spring.datasource.two.type=com.alibaba.druid.pool.DruidDataSource
+```
+
+然后再提供两个 DataSource，如下：
+
+```java
+@Configuration
+public class DataSourceConfig {
+    @Bean
+    @ConfigurationProperties(prefix = "spring.datasource.one")
+    DataSource dsOne() {
+        return DruidDataSourceBuilder.create().build();
+    }
+    @Bean
+    @ConfigurationProperties(prefix = "spring.datasource.two")
+    DataSource dsTwo() {
+        return DruidDataSourceBuilder.create().build();
+    }
+}
+```
+
+## MyBatis 配置
+
+接下来则是 MyBatis 的配置，不同于 JdbcTemplate，MyBatis 的配置要稍微麻烦一些，因为要提供两个 Bean，因此这里两个数据源我将在两个类中分开来配置，首先来看第一个数据源的配置：
+
+```java
+@Configuration
+@MapperScan(basePackages = "org.javaboy.mybatis.mapper1",sqlSessionFactoryRef = "sqlSessionFactory1",sqlSessionTemplateRef = "sqlSessionTemplate1")
+public class MyBatisConfigOne {
+    @Resource(name = "dsOne")
+    DataSource dsOne;
+
+    @Bean
+    SqlSessionFactory sqlSessionFactory1() {
+        SqlSessionFactory sessionFactory = null;
+        try {
+            SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
+            bean.setDataSource(dsOne);
+            sessionFactory = bean.getObject();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return sessionFactory;
+    }
+    @Bean
+    SqlSessionTemplate sqlSessionTemplate1() {
+        return new SqlSessionTemplate(sqlSessionFactory1());
+    }
+}
+```
+
+创建 MyBatisConfigOne 类，首先指明该类是一个配置类，配置类中要扫描的包是 org.javaboy.mybatis.mapper1 ，即该包下的 Mapper 接口将操作 dsOne 中的数据，对应的 SqlSessionFactory 和 SqlSessionTemplate 分别是 sqlSessionFactory1 和 sqlSessionTemplate1，在 MyBatisConfigOne 内部，分别提供 SqlSessionFactory 和 SqlSessionTemplate 即可， SqlSessionFactory 根据 dsOne 创建，然后再根据创建好的SqlSessionFactory 创建一个 SqlSessionTemplate。
+
+这里配置完成后，依据这个配置，再来配置第二个数据源即可：
+
+```java
+@Configuration
+@MapperScan(basePackages = "org.javaboy.mybatis.mapper2",sqlSessionFactoryRef = "sqlSessionFactory2",sqlSessionTemplateRef = "sqlSessionTemplate2")
+public class MyBatisConfigTwo {
+    @Resource(name = "dsTwo")
+    DataSource dsTwo;
+
+    @Bean
+    SqlSessionFactory sqlSessionFactory2() {
+        SqlSessionFactory sessionFactory = null;
+        try {
+            SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
+            bean.setDataSource(dsTwo);
+            sessionFactory = bean.getObject();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return sessionFactory;
+    }
+    @Bean
+    SqlSessionTemplate sqlSessionTemplate2() {
+        return new SqlSessionTemplate(sqlSessionFactory2());
+    }
+}
+```
+
+这样 MyBatis 多数据源基本上就配置好了，接下来只需要在 org.javaboy.mybatis.mapper1 和 org.javaboy.mybatis.mapper2 包中提供不同的 Mapper，Service 中注入不同的 Mapper 就可以操作不同的数据源。
+
+### mapper 创建
+
+org.javaboy.mybatis.mapper1 中的 mapper：
+
+```java
+public interface UserMapperOne {
+    List<User> getAllUser();
+}
+```
+
+对应的 XML 文件：
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.javaboy.mybatis.mapper1.UserMapperOne">
+    <select id="getAllUser" resultType="org.javaboy.mybatis.model.User">
+        select * from t_user;
+    </select>
+</mapper>
+```
+
+org.javaboy.mybatis.mapper2 中的 mapper：
+
+```java
+public interface UserMapper {
+    List<User> getAllUser();
+}
+```
+
+对应的 XML 文件：
+
+```java
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.javaboy.mybatis.mapper2.UserMapper">
+    <select id="getAllUser" resultType="org.javaboy.mybatis.model.User">
+        select * from t_user;
+    </select>
+</mapper>
+```
+
+接下来，在 Service 中注入两个不同的 Mapper，不同的 Mapper 将操作不同的数据源。
+
+## Spring Boot 整合 Redis
+
+### 方案一：Spring Data Redis
+
+#### 创建工程
+
+#### 赖：
+
+![image-20201018233301120](Spring Boot Focus.assets/image-20201018233301120.png)
+
+创建成功后，还需要手动引入 commos-pool2 的依赖，因此最终完整的 pom.xml 依赖如下：
+
+```java
+<dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-pool2</artifactId>
+    </dependency>
+```
+
+#### 配置 Redis 信息
+
+接下来配置 Redis 的信息，信息包含两方面，一方面是 Redis 的基本信息，另一方面则是连接池信息:
+
+```pro
+spring.redis.database=0
+spring.redis.password=123
+spring.redis.port=6379
+spring.redis.host=192.168.66.128
+spring.redis.lettuce.pool.min-idle=5
+spring.redis.lettuce.pool.max-idle=10
+spring.redis.lettuce.pool.max-active=8
+spring.redis.lettuce.pool.max-wait=1ms
+spring.redis.lettuce.shutdown-timeout=100ms
+```
+
+### 自动配置
+
+当开发者在项目中引入了 Spring Data Redis ，并且配置了 Redis 的基本信息，此时，自动化配置就会生效。
+
+我们从 Spring Boot 中 Redis 的自动化配置类中就可以看出端倪：
+
+```java
+@Configuration
+@ConditionalOnClass(RedisOperations.class)
+@EnableConfigurationProperties(RedisProperties.class)
+@Import({ LettuceConnectionConfiguration.class, JedisConnectionConfiguration.class })
+public class RedisAutoConfiguration {
+    @Bean
+    @ConditionalOnMissingBean(name = "redisTemplate")
+    public RedisTemplate<Object, Object> redisTemplate(
+                    RedisConnectionFactory redisConnectionFactory) throws UnknownHostException {
+            RedisTemplate<Object, Object> template = new RedisTemplate<>();
+            template.setConnectionFactory(redisConnectionFactory);
+            return template;
+    }
+    @Bean
+    @ConditionalOnMissingBean
+    public StringRedisTemplate stringRedisTemplate(
+                    RedisConnectionFactory redisConnectionFactory) throws UnknownHostException {
+            StringRedisTemplate template = new StringRedisTemplate();
+            template.setConnectionFactory(redisConnectionFactory);
+            return template;
+    }
+}
+```
+
+这个自动化配置类很好理解：
+
+1. 首先标记这个是一个配置类，同时该配置在 RedisOperations 存在的情况下才会生效(即项目中引入了 Spring Data Redis)
+2. 然后导入在 application.properties 中配置的属性
+3. 然后再导入连接池信息（如果存在的话）
+4. 最后，提供了两个 Bean ，RedisTemplate 和 StringRedisTemplate ，其中 StringRedisTemplate 是 RedisTemplate 的子类，两个的方法基本一致，不同之处主要体现在操作的数据类型不同，RedisTemplate 中的两个泛型都是 Object ，意味者存储的 key 和 value 都可以是一个对象，而 StringRedisTemplate 的 两个泛型都是 String ，意味者 StringRedisTemplate 的 key 和 value 都只能是字符串。如果开发者没有提供相关的 Bean ，这两个配置就会生效，否则不会生效。
+
+### 使用
+
+接下来，可以直接在 Service 中注入 StringRedisTemplate 或者 RedisTemplate 来使用：
+
+```java
+@Service
+public class HelloService {
+    @Autowired
+    RedisTemplate redisTemplate;
+    public void hello() {
+        ValueOperations ops = redisTemplate.opsForValue();
+        ops.set("k1", "v1");
+        Object k1 = ops.get("k1");
+        System.out.println(k1);
+    }
+}
+```
+
+Redis 中的数据操作，大体上来说，可以分为两种：
+
+1. 针对 key 的操作，相关的方法就在 RedisTemplate 中
+2. 针对具体数据类型的操作，相关的方法需要首先获取对应的数据类型，获取相应数据类型的操作方法是 opsForXXX
+
+调用该方法就可以将数据存储到 Redis 中去了，如下：
+
+![image-20201018233941008](Spring Boot Focus.assets/image-20201018233941008.png)
+
+k1 前面的字符是由于使用了 RedisTemplate 导致的，RedisTemplate 对 key 进行序列化之后的结果。
+
+RedisTemplate 中，key 默认的序列化方案是 JdkSerializationRedisSerializer 。
+
+而在 StringRedisTemplate 中，key 默认的序列化方案是 StringRedisSerializer ，因此，如果使用 StringRedisTemplate ，默认情况下 key 前面不会有前缀。
+
+不过开发者也可以自行修改 RedisTemplate 中的序列化方案，如下:
+
+```java
+@Service
+public class HelloService {
+    @Autowired
+    RedisTemplate redisTemplate;
+    public void hello() {
+        redisTemplate.setKeySerializer(new StringRedisSerializer());
+        ValueOperations ops = redisTemplate.opsForValue();
+        ops.set("k1", "v1");
+        Object k1 = ops.get("k1");
+        System.out.println(k1);
+    }
+}
+```
+
+当然也可以直接使用 StringRedisTemplate：
+
+```java
+@Service
+public class HelloService {
+    @Autowired
+    StringRedisTemplate stringRedisTemplate;
+    public void hello2() {
+        ValueOperations ops = stringRedisTemplate.opsForValue();
+        ops.set("k2", "v2");
+        Object k1 = ops.get("k2");
+        System.out.println(k1);
+    }
+}
+```
+
+另外需要注意 ，Spring Boot 的自动化配置，只能配置单机的 Redis ，如果是 Redis 集群，则所有的东西都需要自己手动配置。
+
+### 方案二：Spring Cache
+
+### 方案三：回归原始时代
