@@ -91,7 +91,7 @@ public class Book {
 
 ##  **Spring Boot中的yaml配置** 
 
-#### 狡兔三窟
+### 狡兔三窟
 
 application.yaml在Spring Boot中可以写在四个不同的位置，分别是如下位置：
 
@@ -1103,9 +1103,7 @@ public interface UserMapper {
 
 ### 方案一：Spring Data Redis
 
-#### 创建工程
-
-#### 赖：
+#### 创建工程：
 
 ![image-20201018233301120](Spring Boot Focus.assets/image-20201018233301120.png)
 
@@ -1242,4 +1240,1051 @@ public class HelloService {
 
 ### 方案二：Spring Cache
 
+ Spring3.1 中开始引入了令人激动的 Cache，在 Spring Boot 中，可以非常方便的使用 Redis 来作为 Cache 的实现，进而实现数据的缓存。 
+
+#### 工程创建
+
+首先创建一个 Spring Boot 工程，注意创建的时候需要引入三个依赖， web、cache 以及 redis 。
+
+#### 基本配置
+
+ 工程创建好之后，首先需要简单配置一下 Redis，Redis 的基本信息，另外，这里要用到 Cache，因此还需要稍微配置一下 Cache，如下： 
+
+```properties
+spring.redis.port=6380
+spring.redis.host=192.168.66.128
+
+spring.cache.cache-names=c1
+```
+
+简单起见，这里我只是配置了 Redis 的端口和地址，然后给缓存取了一个名字，这个名字在后文会用到。
+
+另外，还需要在配置类上添加如下代码，表示开启缓存：
+
+```java
+@SpringBootApplication
+@EnableCaching
+public class RediscacheApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(RediscacheApplication.class, args);
+    }
+}
+```
+
+ 完成了这些配置之后，Spring Boot 就会自动帮我们在后台配置一个 RedisCacheManager，相关的配置是在org.springframework.boot.autoconfigure.cache.RedisCacheConfiguration 类中完成的。部分源码如下： 
+
+```java
+@Configuration
+@ConditionalOnClass(RedisConnectionFactory.class)
+@AutoConfigureAfter(RedisAutoConfiguration.class)
+@ConditionalOnBean(RedisConnectionFactory.class)
+@ConditionalOnMissingBean(CacheManager.class)
+@Conditional(CacheCondition.class)
+class RedisCacheConfiguration {
+	@Bean
+	public RedisCacheManager cacheManager(RedisConnectionFactory redisConnectionFactory,
+			ResourceLoader resourceLoader) {
+		RedisCacheManagerBuilder builder = RedisCacheManager
+				.builder(redisConnectionFactory)
+				.cacheDefaults(determineConfiguration(resourceLoader.getClassLoader()));
+		List<String> cacheNames = this.cacheProperties.getCacheNames();
+		if (!cacheNames.isEmpty()) {
+			builder.initialCacheNames(new LinkedHashSet<>(cacheNames));
+		}
+		return this.customizerInvoker.customize(builder.build());
+	}
+}
+```
+
+ 看类上的注解，发现在万事俱备的情况下，系统会自动提供一个 RedisCacheManager 的 Bean，这个 RedisCacheManager 间接实现了 Spring 中的 Cache 接口，有了这个 Bean，我们就可以直接使用 Spring 中的缓存注解和接口了，而缓存数据则会被自动存储到 Redis 上。在单机的 Redis 中，这个 Bean 系统会自动提供，如果是 Redis 集群，这个 Bean 需要开发者来提供（后面的文章会讲到） 
+
+#### 缓存使用
+
+这里主要向小伙伴们介绍缓存中几个核心的注解使用。
+
+##### @CacheConfig
+
+ 这个注解在类上使用，用来描述该类中所有方法使用的缓存名称，当然也可以不使用该注解，直接在具体的缓存注解上配置名称，示例代码如下： 
+
+```java
+@Service
+@CacheConfig(cacheNames = "c1")
+public class UserService {
+}
+```
+
+##### @Cacheable
+
+ 这个注解一般加在查询方法上，表示将一个方法的返回值缓存起来，默认情况下，缓存的 key 就是方法的参数，缓存的 value 就是方法的返回值。示例代码如下： 
+
+```java
+@Cacheable(key = "#id")
+public User getUserById(Integer id,String username) {
+    System.out.println("getUserById");
+    return getUserFromDBById(id);
+}
+```
+
+ 当有多个参数时，默认就使用多个参数来做 key，如果只需要其中某一个参数做 key，则可以在 @Cacheable 注解中，通过 key 属性来指定 key，如上代码就表示只使用 id 作为缓存的 key，如果对 key 有复杂的要求，可以自定义 keyGenerator。当然，Spring Cache 中提供了 root 对象，可以在不定义 keyGenerator 的情况下实现一些复杂的效果： 
+
+![1603075603710](Spring Boot Focus.assets/1603075603710.png)
+
+##### @CachePut
+
+ 这个注解一般加在更新方法上，当数据库中的数据更新后，缓存中的数据也要跟着更新，使用该注解，可以将方法的返回值自动更新到已经存在的 key 上，示例代码如下： 
+
+```java
+@CachePut(key = "#user.id")
+public User updateUserById(User user) {
+    return user;
+}
+```
+
+##### @CacheEvict
+
+ 这个注解一般加在删除方法上，当数据库中的数据删除后，相关的缓存数据也要自动清除，该注解在使用的时候也可以配置按照某种条件删除（condition 属性）或者或者配置清除所有缓存（allEntries 属性），示例代码如下： 
+
+```java
+@CacheEvict()
+public void deleteUserById(Integer id) {
+    //在这里执行删除操作， 删除是去数据库中删除
+}
+```
+
+#### 总结
+
+在 Spring Boot 中，使用 Redis 缓存，既可以使用 RedisTemplate 自己来实现，也可以使用使用这种方式，这种方式是 Spring Cache 提供的统一接口，实现既可以是 Redis，也可以是 Ehcache 或者其他支持这种规范的缓存框架。从这个角度来说，Spring Cache 和 Redis、Ehcache 的关系就像 JDBC 与各种数据库驱动的关系。
+
 ### 方案三：回归原始时代
+
+## Spring Boot 整合 Session 共享
+
+### 基本介绍
+
+ 在传统的单服务架构中，一般来说，只有一个服务器，那么不存在 Session 共享问题，但是在分布式/集群项目中，Session 共享则是一个必须面对的问题，先看一个简单的架构图： 
+
+![1603073293257](Spring Boot Focus.assets/1603073293257.png)
+
+ 在这样的架构中，会出现一些单服务中不存在的问题，例如客户端发起一个请求，这个请求到达 Nginx 上之后，被 Nginx 转发到 Tomcat A 上，然后在 Tomcat A 上往 session 中保存了一份数据，下次又来一个请求，这个请求被转发到 Tomcat B 上，此时再去 Session 中获取数据，发现没有之前的数据。对于这一类问题的解决，思路很简单，就是将各个服务之间需要共享的数据，保存到一个公共的地方（主流方案就是 Redis）： 
+
+![1603073607461](Spring Boot Focus.assets/1603073607461.png)
+
+当所有 Tomcat 需要往 Session 中写数据时，都往 Redis 中写，当所有 Tomcat 需要读数据时，都从 Redis 中读。这样，不同的服务就可以使用相同的 Session 数据了。
+
+这样的方案，可以由开发者手动实现，即手动往 Redis 中存储数据，手动从 Redis 中读取数据，相当于使用一些 Redis 客户端工具来实现这样的功能，毫无疑问，手动实现工作量还是蛮大的。
+
+一个简化的方案就是使用 Spring Session 来实现这一功能，Spring Session 就是使用 Spring 中的代理过滤器，将所有的 Session 操作拦截下来，自动的将数据 同步到 Redis 中，或者自动的从 Redis 中读取数据。
+
+对于开发者来说，所有关于 Session 同步的操作都是透明的，开发者使用 Spring Session，一旦配置完成后，具体的用法就像使用一个普通的 Session 一样。
+
+### 1 实战
+
+#### 1.1 创建工程
+
+首先 创建一个 Spring Boot 工程，引入 Web、Spring Session 以及 Redis。
+
+ 创建成功之后，pom.xml 文件如下： 
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.session</groupId>
+        <artifactId>spring-session-data-redis</artifactId>
+    </dependency>
+</dependencies>
+```
+
+**注意：**
+
+这里我使用的 Spring Boot 版本是 2.1.4 ，如果使用当前最新版 Spring Boot2.1.5 的话，除了上面这些依赖之外，需要额外添加 Spring Security 依赖（其他操作不受影响，仅仅只是多了一个依赖，当然也多了 Spring Security 的一些默认认证流程）。
+
+#### 1.2 配置 Redis
+
+```properties
+spring.redis.host=192.168.66.128
+spring.redis.port=6379
+spring.redis.password=123
+spring.redis.database=0
+```
+
+ 这里的 Redis ，我虽然配置了四行，但是考虑到端口默认就是 6379 ，database 默认就是 0，所以真正要配置的，其实就是两行。 
+
+#### 1.3 使用
+
+ 配置完成后 ，就可以使用 Spring Session 了，其实就是使用普通的 HttpSession ，其他的 Session 同步到 Redis 等操作，框架已经自动帮你完成了： 
+
+```java
+@RestController
+public class HelloController {
+    @Value("${server.port}")
+    Integer port;
+    @GetMapping("/set")
+    public String set(HttpSession session) {
+        session.setAttribute("user", "javaboy");
+        return String.valueOf(port);
+    }
+    @GetMapping("/get")
+    public String get(HttpSession session) {
+        return session.getAttribute("user") + ":" + port;
+    }
+}
+```
+
+考虑到一会 Spring Boot 将以集群的方式启动 ，为了获取每一个请求到底是哪一个 Spring Boot 提供的服务，需要在每次请求时返回当前服务的端口号，因此这里我注入了 server.port 。
+
+接下来 ，项目打包：
+
+![1603074150174](Spring Boot Focus.assets/1603074150174.png)
+
+ 打包之后，启动项目的两个实例： 
+
+```
+java -jar sessionshare-0.0.1-SNAPSHOT.jar --server.port=8080
+java -jar sessionshare-0.0.1-SNAPSHOT.jar --server.port=8081
+```
+
+ 然后先访问 `localhost:8080/set` 向 `8080` 这个服务的 `Session` 中保存一个变量，访问完成后，数据就已经自动同步到 `Redis` 中 了 ： 
+
+![1603074215300](Spring Boot Focus.assets/1603074215300.png)
+
+ 然后，再调用 `localhost:8081/get` 接口，就可以获取到 `8080` 服务的 `session` 中的数据： 
+
+![1603074366996](Spring Boot Focus.assets/1603074366996.png)
+
+ 此时关于 session 共享的配置就已经全部完成了，session 共享的效果我们已经看到了，但是每次访问都是我自己手动切换服务实例，因此，接下来我们来引入 Nginx ，实现服务实例自动切换。 
+
+#### 1.4 引入 Nginx
+
+ 进入 Nginx 的安装目录的 conf 目录下（默认是在 `/usr/local/nginx/conf`），编辑 nginx.conf 文件: 
+
+![1603074551420](Spring Boot Focus.assets/1603074551420.png)
+
+在这段配置中：
+
+1. upstream 表示配置上游服务器
+2. javaboy.org 表示服务器集群的名字，这个可以随意取名字
+3. upstream 里边配置的是一个个的单独服务
+4. weight 表示服务的权重，意味者将有多少比例的请求从 Nginx 上转发到该服务上
+5. location 中的 proxy_pass 表示请求转发的地址，`/` 表示拦截到所有的请求，转发转发到刚刚配置好的服务集群中
+6. proxy_redirect 表示设置当发生重定向请求时，nginx 自动修正响应头数据（默认是 Tomcat 返回重定向，此时重定向的地址是 Tomcat 的地址，我们需要将之修改使之成为 Nginx 的地址）。
+
+ 配置完成后，将本地的 Spring Boot 打包好的 jar 上传到 Linux ，然后在 Linux 上分别启动两个 Spring Boot 实例： 
+
+```
+nohup java -jar sessionshare-0.0.1-SNAPSHOT.jar --server.port=8080 &
+nohup java -jar sessionshare-0.0.1-SNAPSHOT.jar --server.port=8081 &
+```
+
+其中
+
+- nohup 表示当终端关闭时，Spring Boot 不要停止运行
+- & 表示让 Spring Boot 在后台启动
+
+ 配置完成后，重启 Nginx： 
+
+```
+/usr/local/nginx/sbin/nginx -s reload
+```
+
+ Nginx 启动成功后，我们首先手动清除 Redis 上的数据，然后访问 `192.168.66.128/set` 表示向 `session` 中保存数据，这个请求首先会到达 `Nginx` 上，再由 `Nginx` 转发给某一个 `Spring Boot` 实例： 
+
+![1603074739950](Spring Boot Focus.assets/1603074739950.png)
+
+ 如上，表示端口为 `8081` 的 `Spring Boot` 处理了这个 `/set` 请求，再访问 `/get` 请求： 
+
+![1603074764445](Spring Boot Focus.assets/1603074764445.png)
+
+ 可以看到，`/get` 请求是被端口为 8080 的服务所处理的。 
+
+## 整合 Spring Security
+
+常见的安全管理技术栈的组合是这样的：
+
+- SSM + Shiro
+- Spring Boot/Spring Cloud + Spring Security
+
+### 项目创建
+
+ 在 Spring Boot 中使用 Spring Security 非常容易，引入依赖即可 。
+
+### 初次体验
+
+ 我们创建一个 HelloController: 
+
+```java
+@RestController
+public class HelloController {
+    @GetMapping("/hello")
+    public String hello() {
+        return "hello";
+    }
+}
+```
+
+ 访问 `/hello` ，需要登录之后才能访问。 
+
+![1603077438334](Spring Boot Focus.assets/1603077438334.png)
+
+Spring Security 支持两种不同的认证方式：
+
+- 可以通过 form 表单来认证
+- 可以通过 HttpBasic 来认证
+
+### 用户名配置
+
+ 默认情况下，登录的用户名是 `user` ，密码则是项目启动时随机生成的字符串，可以从启动的控制台日志中看到默认密码： 
+
+![1603077556229](Spring Boot Focus.assets/1603077556229.png)
+
+这个随机生成的密码，每次启动时都会变。对登录的用户名/密码进行配置，有三种不同的方式：
+
+- 在 application.properties 中进行配置
+- 通过 Java 代码配置在内存中
+- 通过 Java 从数据库中加载
+
+#### 配置文件配置用户名/密码
+
+ 可以直接在 application.properties 文件中配置用户的基本信息： 
+
+```properties
+spring.security.user.name=javaboy
+spring.security.user.password=123
+```
+
+#### Java 配置用户名/密码
+
+ 也可以在 Java 代码中配置用户名密码，首先需要我们创建一个 Spring Security 的配置类，集成自 WebSecurityConfigurerAdapter 类，如下： 
+
+```java
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        //下面这两行配置表示在内存中配置了两个用户
+        auth.inMemoryAuthentication()
+                .withUser("javaboy").roles("admin").password("$2a$10$OR3VSksVAmCzc.7WeaRPR.t0wyCsIj24k0Bne8iKWV1o.V9wsP8Xe")
+                .and()
+                .withUser("lisi").roles("user").password("$2a$10$p1H8iWa8I4.CA.7Z8bwLjes91ZpY.rYREGHQEInNtAp4NzL6PLKxi");
+    }
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+这里我们在 configure 方法中配置了两个用户，用户的密码都是加密之后的字符串(明文是 123)，从 Spring5 开始，强制要求密码要加密，如果非不想加密，可以使用一个过期的 PasswordEncoder 的实例 NoOpPasswordEncoder，但是不建议这么做，毕竟不安全。
+
+Spring Security 中提供了 BCryptPasswordEncoder 密码编码工具，可以非常方便的实现密码的加密加盐，相同明文加密出来的结果总是不同，这样就不需要用户去额外保存`盐`的字段了，这一点比 Shiro 要方便很多。
+
+### 登录配置
+
+```java
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    @Autowired
+    VerifyCodeFilter verifyCodeFilter;
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.addFilterBefore(verifyCodeFilter, UsernamePasswordAuthenticationFilter.class);
+        http
+        .authorizeRequests()//开启登录配置
+        .antMatchers("/hello").hasRole("admin")//表示访问 /hello 这个接口，需要具备 admin 这个角色
+        .anyRequest().authenticated()//表示剩余的其他接口，登录之后就能访问
+        .and()
+        .formLogin()
+        //定义登录页面，未登录时，访问一个需要登录之后才能访问的接口，会自动跳转到该页面
+        .loginPage("/login_p")
+        //登录处理接口
+        .loginProcessingUrl("/doLogin")
+        //定义登录时，用户名的 key，默认为 username
+        .usernameParameter("uname")
+        //定义登录时，用户密码的 key，默认为 password
+        .passwordParameter("passwd")
+        //登录成功的处理器
+        .successHandler(new AuthenticationSuccessHandler() {
+            @Override
+            public void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse resp, Authentication authentication) throws IOException, ServletException {
+                    resp.setContentType("application/json;charset=utf-8");
+                    PrintWriter out = resp.getWriter();
+                    out.write("success");
+                    out.flush();
+                }
+            })
+            .failureHandler(new AuthenticationFailureHandler() {
+                @Override
+                public void onAuthenticationFailure(HttpServletRequest req, HttpServletResponse resp, AuthenticationException exception) throws IOException, ServletException {
+                    resp.setContentType("application/json;charset=utf-8");
+                    PrintWriter out = resp.getWriter();
+                    out.write("fail");
+                    out.flush();
+                }
+            })
+            .permitAll()//和表单登录相关的接口统统都直接通过
+            .and()
+            .logout()
+            .logoutUrl("/logout")
+            .logoutSuccessHandler(new LogoutSuccessHandler() {
+                @Override
+                public void onLogoutSuccess(HttpServletRequest req, HttpServletResponse resp, Authentication authentication) throws IOException, ServletException {
+                    resp.setContentType("application/json;charset=utf-8");
+                    PrintWriter out = resp.getWriter();
+                    out.write("logout success");
+                    out.flush();
+                }
+            })
+            .permitAll()
+            .and()
+            .httpBasic()
+            .and()
+            .csrf().disable();
+    }
+}
+```
+
+ 我们可以在 successHandler 方法中，配置登录成功的回调，如果是前后端分离开发的话，登录成功后返回 JSON 即可，同理，failureHandler 方法中配置登录失败的回调，logoutSuccessHandler 中则配置注销成功的回调。 
+
+### 忽略拦截
+
+如果某一个请求地址不需要拦截的话，有两种方式实现：
+
+- 设置该地址匿名访问
+- 直接过滤掉该地址，即该地址不走 Spring Security 过滤器链
+
+推荐使用第二种方案，配置如下：
+
+```java
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        web.ignoring().antMatchers("/vercode");
+    }
+}
+```
+
+## SpringSecurity 使用 JSON 格式登录
+
+### 基本登录方案
+
+-  创建 Spring Boot 工程 
+
+ 首先创建 SpringBoot 工程，添加 SpringSecurity 依赖 。
+
+-  添加 Security 配置 
+
+ 创建 SecurityConfig，完成 SpringSecurity 的配置，如下： 
+
+```java
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.inMemoryAuthentication().withUser("zhangsan").password("$2a$10$2O4EwLrrFPEboTfDOtC0F.RpUMk.3q3KvBHRx7XXKUMLBGjOOBs8q").roles("user");
+    }
+
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+    }
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.authorizeRequests()
+                .anyRequest().authenticated()
+                .and()
+                .formLogin()
+                .loginProcessingUrl("/doLogin")
+                .successHandler(new AuthenticationSuccessHandler() {
+                    @Override
+                    public void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse resp, Authentication authentication) throws IOException, ServletException {
+                        RespBean ok = RespBean.ok("登录成功！",authentication.getPrincipal());
+                        resp.setContentType("application/json;charset=utf-8");
+                        PrintWriter out = resp.getWriter();
+                        out.write(new ObjectMapper().writeValueAsString(ok));
+                        out.flush();
+                        out.close();
+                    }
+                })
+                .failureHandler(new AuthenticationFailureHandler() {
+                    @Override
+                    public void onAuthenticationFailure(HttpServletRequest req, HttpServletResponse resp, AuthenticationException e) throws IOException, ServletException {
+                        RespBean error = RespBean.error("登录失败");
+                        resp.setContentType("application/json;charset=utf-8");
+                        PrintWriter out = resp.getWriter();
+                        out.write(new ObjectMapper().writeValueAsString(error));
+                        out.flush();
+                        out.close();
+                    }
+                })
+                .loginPage("/login")
+                .permitAll()
+                .and()
+                .logout()
+                .logoutUrl("/logout")
+                .logoutSuccessHandler(new LogoutSuccessHandler() {
+                    @Override
+                    public void onLogoutSuccess(HttpServletRequest req, HttpServletResponse resp, Authentication authentication) throws IOException, ServletException {
+                        RespBean ok = RespBean.ok("注销成功！");
+                        resp.setContentType("application/json;charset=utf-8");
+                        PrintWriter out = resp.getWriter();
+                        out.write(new ObjectMapper().writeValueAsString(ok));
+                        out.flush();
+                        out.close();
+                    }
+                })
+                .permitAll()
+                .and()
+                .csrf()
+                .disable()
+                .exceptionHandling()
+                .accessDeniedHandler(new AccessDeniedHandler() {
+                    @Override
+                    public void handle(HttpServletRequest req, HttpServletResponse resp, AccessDeniedException e) throws IOException, ServletException {
+                        RespBean error = RespBean.error("权限不足，访问失败");
+                        resp.setStatus(403);
+                        resp.setContentType("application/json;charset=utf-8");
+                        PrintWriter out = resp.getWriter();
+                        out.write(new ObjectMapper().writeValueAsString(error));
+                        out.flush();
+                        out.close();
+                    }
+                });
+
+    }
+}
+```
+
+ 这里的配置虽然有点长，但是很基础，配置含义也比较清晰，首先提供 BCryptPasswordEncoder 作为 PasswordEncoder，可以实现对密码的自动加密加盐，非常方便，然后提供了一个名为 `zhangsan` 的用户，密码是 `123` ，角色是 `user` ，最后配置登录逻辑，所有的请求都需要登录后才能访问，登录接口是 `/doLogin` ，用户名的 key 是 username，密码的 key 是 password，同时配置登录成功、登录失败以及注销成功、权限不足时都给用户返回 JSON 提示，另外，这里虽然配置了登录页面为 `/login` ，实际上这不是一个页面，而是一段 JSON，在 LoginController 中提供该接口，如下： 
+
+```java
+@RestController
+@ResponseBody
+public class LoginController {
+    @GetMapping("/login")
+    public RespBean login() {
+        return RespBean.error("尚未登录，请登录");
+    }
+    @GetMapping("/hello")
+    public String hello() {
+        return "hello";
+    }
+}
+```
+
+这里 `/login` 只是一个 JSON 提示，而不是页面， `/hello` 则是一个测试接口。
+
+OK，做完上述步骤就可以开始测试了，运行 SpringBoot 项目，访问 `/hello` 接口，结果如下：
+
+![1603078934249](Spring Boot Focus.assets/1603078934249.png)
+
+此时先调用登录接口进行登录，如下：
+
+![1603078971858](Spring Boot Focus.assets/1603078971858.png)
+
+ 登录成功后，再去访问 `/hello` 接口就可以成功访问了。 
+
+### 使用 JSON 登录
+
+ 上面演示的是一种原始的登录方案，如果想将用户名密码通过 JSON 的方式进行传递，则需要自定义相关过滤器，通过分析源码我们发现，默认的用户名密码提取在 UsernamePasswordAuthenticationFilter 过滤器中，部分源码如下： 
+
+```java
+public class UsernamePasswordAuthenticationFilter extends
+        AbstractAuthenticationProcessingFilter {
+    public static final String SPRING_SECURITY_FORM_USERNAME_KEY = "username";
+    public static final String SPRING_SECURITY_FORM_PASSWORD_KEY = "password";
+
+    private String usernameParameter = SPRING_SECURITY_FORM_USERNAME_KEY;
+    private String passwordParameter = SPRING_SECURITY_FORM_PASSWORD_KEY;
+    private boolean postOnly = true;
+    public UsernamePasswordAuthenticationFilter() {
+        super(new AntPathRequestMatcher("/login", "POST"));
+    }
+
+    public Authentication attemptAuthentication(HttpServletRequest request,
+            HttpServletResponse response) throws AuthenticationException {
+        if (postOnly && !request.getMethod().equals("POST")) {
+            throw new AuthenticationServiceException(
+                    "Authentication method not supported: " + request.getMethod());
+        }
+
+        String username = obtainUsername(request);
+        String password = obtainPassword(request);
+
+        if (username == null) {
+            username = "";
+        }
+
+        if (password == null) {
+            password = "";
+        }
+
+        username = username.trim();
+
+        UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(
+                username, password);
+
+        // Allow subclasses to set the "details" property
+        setDetails(request, authRequest);
+
+        return this.getAuthenticationManager().authenticate(authRequest);
+    }
+
+    protected String obtainPassword(HttpServletRequest request) {
+        return request.getParameter(passwordParameter);
+    }
+
+    protected String obtainUsername(HttpServletRequest request) {
+        return request.getParameter(usernameParameter);
+    }
+    //...
+    //...
+}
+```
+
+ 从这里可以看到，默认的 `用户名/密码` 提取就是通过 request 中的 getParameter 来提取的，如果想使用 JSON 传递用户名密码，只需要将这个过滤器替换掉即可，自定义过滤器如下： 
+
+```java
+public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
+    @Override
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        if (request.getContentType().equals(MediaType.APPLICATION_JSON_UTF8_VALUE)
+                || request.getContentType().equals(MediaType.APPLICATION_JSON_VALUE)) {
+            ObjectMapper mapper = new ObjectMapper();
+            UsernamePasswordAuthenticationToken authRequest = null;
+            try (InputStream is = request.getInputStream()) {
+                Map<String,String> authenticationBean = mapper.readValue(is, Map.class);
+                authRequest = new UsernamePasswordAuthenticationToken(
+                        authenticationBean.get("username"), authenticationBean.get("password"));
+            } catch (IOException e) {
+                e.printStackTrace();
+                authRequest = new UsernamePasswordAuthenticationToken(
+                        "", "");
+            } finally {
+                setDetails(request, authRequest);
+                return this.getAuthenticationManager().authenticate(authRequest);
+            }
+        }
+        else {
+            return super.attemptAuthentication(request, response);
+        }
+    }
+}
+```
+
+ 这里只是将用户名/密码的获取方案重新修正下，改为了从 JSON 中获取用户名密码，然后在 SecurityConfig 中作出如下修改： 
+
+```java
+@Override
+protected void configure(HttpSecurity http) throws Exception {
+    http.authorizeRequests().anyRequest().authenticated()
+            .and()
+            .formLogin()
+            .and().csrf().disable();
+    http.addFilterAt(customAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+}
+@Bean
+CustomAuthenticationFilter customAuthenticationFilter() throws Exception {
+    CustomAuthenticationFilter filter = new CustomAuthenticationFilter();
+    filter.setAuthenticationSuccessHandler(new AuthenticationSuccessHandler() {
+        @Override
+        public void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse resp, Authentication authentication) throws IOException, ServletException {
+            resp.setContentType("application/json;charset=utf-8");
+            PrintWriter out = resp.getWriter();
+            RespBean respBean = RespBean.ok("登录成功!");
+            out.write(new ObjectMapper().writeValueAsString(respBean));
+            out.flush();
+            out.close();
+        }
+    });
+    filter.setAuthenticationFailureHandler(new AuthenticationFailureHandler() {
+        @Override
+        public void onAuthenticationFailure(HttpServletRequest req, HttpServletResponse resp, AuthenticationException e) throws IOException, ServletException {
+            resp.setContentType("application/json;charset=utf-8");
+            PrintWriter out = resp.getWriter();
+            RespBean respBean = RespBean.error("登录失败!");
+            out.write(new ObjectMapper().writeValueAsString(respBean));
+            out.flush();
+            out.close();
+        }
+    });
+    filter.setAuthenticationManager(authenticationManagerBean());
+    return filter;
+}
+```
+
+ 将自定义的 CustomAuthenticationFilter 类加入进来即可，接下来就可以使用 JSON 进行登录了，如下： 
+
+![1603079136547](Spring Boot Focus.assets/1603079136547.png)
+
+## Spring Boot 邮件发送
+
+### 邮件基础
+
+SMTP 是一个基于 TCP/IP 的应用层协议，江湖地位有点类似于 HTTP，SMTP 服务器默认监听的端口号为 25 。看到这里，小伙伴们可能会想到既然 SMTP 协议是基于 TCP/IP 的应用层协议，那么我是不是也可以通过 Socket 发送一封邮件呢？回答是肯定的。
+
+生活中我们投递一封邮件要经过如下几个步骤：
+
+1. 深圳的小王先将邮件投递到深圳的邮局
+2. 深圳的邮局将邮件运送到上海的邮局
+3. 上海的小张来邮局取邮件
+
+这是一个缩减版的生活中邮件发送过程。这三个步骤可以分别对应我们的邮件发送过程，假设从 [aaa@qq.com](mailto:aaa@qq.com) 发送邮件到 [111@163.com](mailto:111@163.com) ：
+
+1. [aaa@qq.com](mailto:aaa@qq.com) 先将邮件投递到腾讯的邮件服务器
+2. 腾讯的邮件服务器将我们的邮件投递到网易的邮件服务器
+3. [111@163.com](mailto:111@163.com) 登录网易的邮件服务器查看邮件
+
+邮件投递大致就是这个过程，这个过程就涉及到了多个协议，我们来分别看一下。
+
+SMTP 协议全称为 Simple Mail Transfer Protocol，译作简单邮件传输协议，它定义了邮件客户端软件与 SMTP 服务器之间，以及 SMTP 服务器与 SMTP 服务器之间的通信规则。
+
+也就是说 [aaa@qq.com](mailto:aaa@qq.com) 用户先将邮件投递到腾讯的 SMTP 服务器这个过程就使用了 SMTP 协议，然后腾讯的 SMTP 服务器将邮件投递到网易的 SMTP 服务器这个过程也依然使用了 SMTP 协议，SMTP 服务器就是用来收邮件。
+
+而 POP3 协议全称为 Post Office Protocol ，译作邮局协议，它定义了邮件客户端与 POP3 服务器之间的通信规则，那么该协议在什么场景下会用到呢？当邮件到达网易的 SMTP 服务器之后， [111@163.com](mailto:111@163.com) 用户需要登录服务器查看邮件，这个时候就该协议就用上了：邮件服务商都会为每一个用户提供专门的邮件存储空间，SMTP 服务器收到邮件之后，就将邮件保存到相应用户的邮件存储空间中，如果用户要读取邮件，就需要通过邮件服务商的 POP3 邮件服务器来完成。
+
+最后，可能也有小伙伴们听说过 IMAP 协议，这个协议是对 POP3 协议的扩展，功能更强，作用类似，这里不再赘述。
+
+### 准备工作
+
+ 目前国内大部分的邮件服务商都不允许直接使用用户名/密码的方式来在代码中发送邮件，都是要先申请授权码，这里以 QQ 邮箱为例，向大家演示授权码的申请流程：首先我们需要先登录 QQ 邮箱网页版，点击上方的设置按钮： 
+
+![1603087302393](Spring Boot Focus.assets/1603087302393.png)
+
+然后点击账户选项卡：
+
+![1603087325312](Spring Boot Focus.assets/1603087325312.png)
+
+ 在账户选项卡中找到开启POP3/SMTP选项，如下： 
+
+![1603087350943](Spring Boot Focus.assets/1603087350943.png)
+
+ 点击开启，开启相关功能，开启过程需要手机号码验证，按照步骤操作即可，不赘述。开启成功之后，即可获取一个授权码，将该号码保存好，一会使用。 
+
+### 项目创建
+
+接下来，我们就可以创建项目了，Spring Boot 中，对于邮件发送提供了自动配置类，开发者只需要加入相关依赖，然后配置一下邮箱的基本信息，就可以发送邮件了。
+
+- 首先创建一个 Spring Boot 项目，引入邮件发送依赖：
+
+![1603087389912](Spring Boot Focus.assets/1603087389912.png)
+
+- 配置邮箱基本信息
+
+项目创建成功后，接下来在 application.properties 中配置邮箱的基本信息：
+
+```properties
+spring.mail.host=smtp.qq.com
+spring.mail.port=587
+spring.mail.username=1510161612@qq.com
+spring.mail.password=ubknfzhjkhrbbabe
+spring.mail.default-encoding=UTF-8
+spring.mail.properties.mail.smtp.socketFactoryClass=javax.net.ssl.SSLSocketFactory
+spring.mail.properties.mail.debug=true
+```
+
+配置含义分别如下：
+
+- 配置 SMTP 服务器地址
+- SMTP 服务器的端口
+- 配置邮箱用户名
+- 配置密码，注意，不是真正的密码，而是刚刚申请到的授权码
+- 默认的邮件编码
+- 配饰 SSL 加密工厂
+- 表示开启 DEBUG 模式，这样，邮件发送过程的日志会在控制台打印出来，方便排查错误
+
+如果不知道 smtp 服务器的端口或者地址的的话，可以参考 腾讯的邮箱文档
+
+- https://service.mail.qq.com/cgi-bin/help?subtype=1&&id=28&&no=371
+
+做完这些之后，Spring Boot 就会自动帮我们配置好邮件发送类，相关的配置在 `org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration` 类中，部分源码如下：
+
+```java
+@Configuration
+@ConditionalOnClass({ MimeMessage.class, MimeType.class, MailSender.class })
+@ConditionalOnMissingBean(MailSender.class)
+@Conditional(MailSenderCondition.class)
+@EnableConfigurationProperties(MailProperties.class)
+@Import({ MailSenderJndiConfiguration.class, MailSenderPropertiesConfiguration.class })
+public class MailSenderAutoConfiguration {
+}
+```
+
+ 从这段代码中，可以看到，导入了另外一个配置 `MailSenderPropertiesConfiguration` 类，这个类中，提供了邮件发送相关的工具类： 
+
+```java
+@Configuration
+@ConditionalOnProperty(prefix = "spring.mail", name = "host")
+class MailSenderPropertiesConfiguration {
+        private final MailProperties properties;
+        MailSenderPropertiesConfiguration(MailProperties properties) {
+                this.properties = properties;
+        }
+        @Bean
+        @ConditionalOnMissingBean
+        public JavaMailSenderImpl mailSender() {
+                JavaMailSenderImpl sender = new JavaMailSenderImpl();
+                applyProperties(sender);
+                return sender;
+        }
+}
+```
+
+可以看到，这里创建了一个 `JavaMailSenderImpl` 的实例， `JavaMailSenderImpl` 是 `JavaMailSender` 的一个实现，我们将使用 `JavaMailSenderImpl` 来完成邮件的发送工作。
+
+做完如上两步，邮件发送的准备工作就算是完成了，接下来就可以直接发送邮件了。
+
+### 发送简单邮件
+
+简单邮件就是指邮件内容是一个普通的文本文档：
+
+```java
+@Autowired
+JavaMailSender javaMailSender;
+@Test
+public void sendSimpleMail() {
+    SimpleMailMessage message = new SimpleMailMessage();
+    message.setSubject("这是一封测试邮件");
+    message.setFrom("1510161612@qq.com");
+    message.setTo("25xxxxx755@qq.com");
+    message.setCc("37xxxxx37@qq.com");
+    message.setBcc("14xxxxx098@qq.com");
+    message.setSentDate(new Date());
+    message.setText("这是测试邮件的正文");
+    javaMailSender.send(message);
+}
+```
+
+从上往下，代码含义分别如下：
+
+1. 构建一个邮件对象
+2. 设置邮件主题
+3. 设置邮件发送者
+4. 设置邮件接收者，可以有多个接收者
+5. 设置邮件抄送人，可以有多个抄送人
+6. 设置隐秘抄送人，可以有多个
+7. 设置邮件发送日期
+8. 设置邮件的正文
+9. 发送邮件
+
+最后执行该方法，就可以实现邮件的发送，发送效果图如下：
+
+![1603087715159](Spring Boot Focus.assets/1603087715159.png)
+
+### 发送带附件的邮件
+
+ 邮件的附件可以是图片，也可以是普通文件，都是支持的。 
+
+```java
+@Test
+public void sendAttachFileMail() throws MessagingException {
+    MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+    MimeMessageHelper helper = new MimeMessageHelper(mimeMessage,true);
+    helper.setSubject("这是一封测试邮件");
+    helper.setFrom("1510161612@qq.com");
+    helper.setTo("25xxxxx755@qq.com");
+    helper.setCc("37xxxxx37@qq.com");
+    helper.setBcc("14xxxxx098@qq.com");
+    helper.setSentDate(new Date());
+    helper.setText("这是测试邮件的正文");
+    helper.addAttachment("javaboy.jpg",new File("C:\\Users\\sang\\Downloads\\javaboy.png"));
+    javaMailSender.send(mimeMessage);
+}
+```
+
+注意这里在构建邮件对象上和前文有所差异，这里是通过 javaMailSender 来获取一个复杂邮件对象，然后再利用 MimeMessageHelper 对邮件进行配置，MimeMessageHelper 是一个邮件配置的辅助工具类，创建时候的 true 表示构建一个 multipart message 类型的邮件，有了 MimeMessageHelper 之后，我们针对邮件的配置都是由 MimeMessageHelper 来代劳。
+
+最后通过 addAttachment 方法来添加一个附件。
+
+执行该方法，邮件发送效果图如下：
+
+![1603087842572](Spring Boot Focus.assets/1603087842572.png)
+
+### 发送带图片资源的邮件
+
+ 图片资源和附件有什么区别呢？图片资源是放在邮件正文中的，即一打开邮件，就能看到图片。但是一般来说，不建议使用这种方式，一些公司会对邮件内容的大小有限制（因为这种方式是将图片一起发送的）。 
+
+```java
+@Test
+public void sendImgResMail() throws MessagingException {
+    MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+    MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
+    helper.setSubject("这是一封测试邮件");
+    helper.setFrom("1510161612@qq.com");
+    helper.setTo("25xxxxx755@qq.com");
+    helper.setCc("37xxxxx37@qq.com");
+    helper.setBcc("14xxxxx098@qq.com");
+    helper.setSentDate(new Date());
+    helper.setText("<p>hello 大家好，这是一封测试邮件，这封邮件包含两种图片，分别如下</p><p>第一张图片：</p><img src='cid:p01'/><p>第二张图片：</p><img src='cid:p02'/>",true);
+    helper.addInline("p01",new FileSystemResource(new File("C:\\Users\\sang\\Downloads\\javaboy.png")));
+    helper.addInline("p02",new FileSystemResource(new File("C:\\Users\\sang\\Downloads\\javaboy2.png")));
+    javaMailSender.send(mimeMessage);
+}
+```
+
+这里的邮件 text 是一个 HTML 文本，里边涉及到的图片资源先用一个占位符占着，setText 方法的第二个参数 true 表示第一个参数是一个 HTML 文本。
+
+setText 之后，再通过 addInline 方法来添加图片资源。
+
+### 使用 Freemarker 作邮件模板
+
+ 首先需要引入 Freemarker 依赖： 
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-freemarker</artifactId>
+</dependency>
+```
+
+ 然后在 `resources/templates` 目录下创建一个 `mail.ftl` 作为邮件发送模板： 
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<p>hello 欢迎加入 xxx 大家庭，您的入职信息如下：</p>
+<table border="1">
+    <tr>
+        <td>姓名</td>
+        <td>${username}</td>
+    </tr>
+    <tr>
+        <td>工号</td>
+        <td>${num}</td>
+    </tr>
+    <tr>
+        <td>薪水</td>
+        <td>${salary}</td>
+    </tr>
+</table>
+<div style="color: #ff1a0e">一起努力创造辉煌</div>
+</body>
+</html>
+```
+
+接下来，将邮件模板渲染成 HTML ，然后发送即可。
+
+```java
+@Test
+public void sendFreemarkerMail() throws MessagingException, IOException, TemplateException {
+    MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+    MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
+    helper.setSubject("这是一封测试邮件");
+    helper.setFrom("1510161612@qq.com");
+    helper.setTo("25xxxxx755@qq.com");
+    helper.setCc("37xxxxx37@qq.com");
+    helper.setBcc("14xxxxx098@qq.com");
+    helper.setSentDate(new Date());
+    //构建 Freemarker 的基本配置
+    Configuration configuration = new Configuration(Configuration.VERSION_2_3_0);
+    // 配置模板位置
+    ClassLoader loader = MailApplication.class.getClassLoader();
+    configuration.setClassLoaderForTemplateLoading(loader, "templates");
+    //加载模板
+    Template template = configuration.getTemplate("mail.ftl");
+    User user = new User();
+    user.setUsername("javaboy");
+    user.setNum(1);
+    user.setSalary((double) 99999);
+    StringWriter out = new StringWriter();
+    //模板渲染，渲染的结果将被保存到 out 中 ，将out 中的 html 字符串发送即可
+    template.process(user, out);
+    helper.setText(out.toString(),true);
+    javaMailSender.send(mimeMessage);
+}
+```
+
+需要注意的是，虽然引入了 `Freemarker` 的自动化配置，但是我们在这里是直接 `new Configuration` 来重新配置 `Freemarker` 的，所以 Freemarker 默认的配置这里不生效，因此，在填写模板位置时，值为 `templates` 。
+
+调用该方法，发送邮件，效果图如下：
+
+![1603088185241](Spring Boot Focus.assets/1603088185241.png)
+
+### 使用 Thymeleaf 作邮件模板
+
+推荐在 Spring Boot 中使用 Thymeleaf 来构建邮件模板。因为 Thymeleaf 的自动化配置提供了一个 TemplateEngine，通过 TemplateEngine 可以方便的将 Thymeleaf 模板渲染为 HTML ，同时，Thymeleaf 的自动化配置在这里是继续有效的 。
+
+首先，引入 Thymeleaf 依赖：
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-thymeleaf</artifactId>
+</dependency>
+```
+
+ 然后，创建 `Thymeleaf` 邮件模板： 
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<p>hello 欢迎加入 xxx 大家庭，您的入职信息如下：</p>
+<table border="1">
+    <tr>
+        <td>姓名</td>
+        <td th:text="${username}"></td>
+    </tr>
+    <tr>
+        <td>工号</td>
+        <td th:text="${num}"></td>
+    </tr>
+    <tr>
+        <td>薪水</td>
+        <td th:text="${salary}"></td>
+    </tr>
+</table>
+<div style="color: #ff1a0e">一起努力创造辉煌</div>
+</body>
+</html>
+```
+
+ 接下来发送邮件： 
+
+```java
+@Autowired
+TemplateEngine templateEngine;
+
+@Test
+public void sendThymeleafMail() throws MessagingException {
+    MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+    MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
+    helper.setSubject("这是一封测试邮件");
+    helper.setFrom("1510161612@qq.com");
+    helper.setTo("25xxxxx755@qq.com");
+    helper.setCc("37xxxxx37@qq.com");
+    helper.setBcc("14xxxxx098@qq.com");
+    helper.setSentDate(new Date());
+    Context context = new Context();
+    context.setVariable("username", "javaboy");
+    context.setVariable("num","000001");
+    context.setVariable("salary", "99999");
+    String process = templateEngine.process("mail.html", context);
+    helper.setText(process,true);
+    javaMailSender.send(mimeMessage);
+}
+```
+
+ 调用该方法，发送邮件，效果图如下： 
+
+![1603088260377](Spring Boot Focus.assets/1603088260377.png)
