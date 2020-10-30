@@ -625,3 +625,444 @@ FROM teacher
 WHERE tname = '张三'))))
 ```
 
+ -- 14查询各科成绩最高分、最低分和平均分，要求输出课程号和选修人数，查询结果按人数降序排列，若人数相同，按课程号升序排列 
+
+```text
+SELECT sc.cid,course.cname,COUNT(DISTINCT sc.SId) 课程人数,
+       AVG(sc.score) 平均分,
+       MAX(sc.score) 最高分,
+       MIN(sc.score) 最低分,
+COUNT(CASE
+        WHEN sc.score >= 60 THEN 1
+        ELSE NULL
+    END) / COUNT(DISTINCT sc.SId) 及格率,
+    COUNT(CASE
+        WHEN sc.score >= 70 AND sc.score < 80 THEN 1
+        ELSE NULL
+    END) / COUNT(DISTINCT sc.SId) 中等率,
+    COUNT(CASE
+        WHEN sc.score >= 80 AND sc.score < 90 THEN 1
+        ELSE NULL
+    END) / COUNT(DISTINCT sc.SId) 优良率,
+    COUNT(CASE
+        WHEN sc.score >= 90 AND sc.score <=100 THEN 1
+        ELSE NULL
+    END) / COUNT(DISTINCT sc.SId) 优秀率
+FROM course
+JOIN sc
+ON course.cid = sc.cid
+GROUP BY sc.cid
+ORDER BY 课程人数  DESC, sc.cid;
+```
+
+ 15 按各科成绩进行排序，并显示排名， Score 重复时保留名次空缺 
+
+ 这题有点难度，首先一方面涉及到组内排名的问题 
+
+```text
+SELECT s1.cid, s1.sid, s1.score, count(s2.score) + 1 as 排名
+FROM sc s1
+LEFT JOIN sc s2
+ON  s1.cid = s2.cid AND s1.score < s2.score
+GROUP BY s1.cid,s1.sid, s1.score
+ORDER BY s1.cid, count(s2.score) + 1 ASC;
+```
+
+--自解
+
+```
+set @rank=0,@c=null,@s=null,@count=1;
+SELECT cid,score,
+@rank := if(@c=cid,if(@s=score,@rank,@rank+@count),1) rank,
+@count := if(@s=score,@count+1,1),
+@c := cid ,@s := score
+FROM sc 
+order by cid,score DESC
+```
+
+ -- 查询学生的总成绩，并进行排名，总分重复时保留名次空缺 
+
+--自解
+
+```
+SET @rank=0,@score=NULL,@count=1;
+SELECT sid ,r.sco,
+@rank := if(@score=r.sco,@rank,@rank+@count),
+@count := if(@score=r.sco,@count+1,1),
+@score := r.sco
+FROM (
+SELECT sid ,sum(score) sco
+FROM sc
+GROUP BY sid
+ORDER BY sco desc
+) r
+
+```
+
+ 17 统计各科成绩各分数段人数：课程编号，课程名称，[100-85]，[85-70]，[70-60]，[60-0] 及所占百分比 
+
+```text
+SELECT c.cname,t1.*
+FROM course c
+JOIN
+(SELECT cid, 
+       SUM(CASE WHEN score BETWEEN 85 AND 100 THEN 1 ELSE 0 END) as '85-100',
+       ROUND(SUM(CASE WHEN score BETWEEN 85 AND 100 THEN 1 ELSE 0 END)/count(score),2) as '[85-100]占比',
+       SUM(CASE WHEN score BETWEEN 70 AND 84 THEN 1 ELSE 0 END) as '70-84',
+       ROUND(SUM(CASE WHEN score BETWEEN 70 AND 84 THEN 1 ELSE 0 END)/count(score),2) as '[70-84]占比',
+       SUM(CASE WHEN score BETWEEN 60 AND 69 THEN 1 ELSE 0 END) as '60-69',
+       ROUND(SUM(CASE WHEN score BETWEEN 60 AND 69 THEN 1 ELSE 0 END)/count(score),2) as '[60-69]占比',
+       SUM(CASE WHEN score BETWEEN 0 AND 59 THEN 1 ELSE 0 END) as '0-59',
+       ROUND(SUM(CASE WHEN score BETWEEN 0 AND 59 THEN 1 ELSE 0 END)/count(score),2) as '[0-59]占比'
+FROM sc
+GROUP BY cid)t1
+ON  c.cid = t1.cid;
+```
+
+ ?18.查询各科成绩前三名的记录 
+
+```text
+-- 首先查询出有哪些组
+SELECT cid, max(score) AS 最大值
+FROM sc
+GROUP BY cid;
+```
+
+```text
+-- 接着使用order by 子句按成绩降序排序（DESC) ，然后用limit子句返回排名前三的学生学号
+SELECT *
+FROM sc
+WHERE cid = '01'
+ORDER BY score DESC
+LIMIT 3;
+
+-- 以此类推，其他两门课程也这么做，用union进行联结
+(SELECT *  FROM sc  WHERE cid = '01'  ORDER BY score DESC  LIMIT 3)
+union all
+(SELECT *  FROM sc  WHERE cid = '02'  ORDER BY score DESC  LIMIT 3)
+union all
+(SELECT *  FROM sc  WHERE cid = '03'  ORDER BY score DESC  LIMIT 3);
+```
+
+ -- 以上方法比较繁琐，并且万一如果有多个分组结果，用起来会非常麻烦，下面推荐一个简单高效做法，运用关联子查询 
+
+```text
+SELECT *
+FROM sc 
+WHERE (SELECT COUNT(*) 
+FROM sc a
+WHERE sc.cid = a.cid AND sc.score < a.score )<3
+ORDER BY cid ASC, sc.score DESC;
+```
+
+ 19.查询每门课程被选修的学生数 
+
+```text
+SELECT cid, count(score) as 学生人数
+FROM sc
+GROUP BY cid；
+```
+
+ 20.查询出只选修两门课程的学生学号和姓名 
+
+```text
+SELECT sid, sname
+FROM student
+WHERE sid IN
+(SELECT sid
+FROM sc
+GROUP BY sid
+HAVING COUNT(cid) =2);
+```
+
+ 21.查询男生、女生人数 
+
+```text
+SELECT ssex,count(sid) as 人数
+FROM student
+GROUP BY ssex;
+```
+
+ 22.查询名字中含有「风」字的学生信息 
+
+```text
+SELECT *
+FROM student
+WHERE sname LIKE '%风%';
+```
+
+ 23.查询同名学生名单，并统计同名人数 
+
+```text
+SELECT sname,count(sname)
+FROM student
+GROUP BY sname
+HAVING count(sname) >= 2;
+```
+
+ 24.查询 1990 年出生的学生名单 
+
+```text
+SELECT *
+FROM student
+WHERE sage BETWEEN '1990-01-01' AND '1990-12-31';
+```
+
+```text
+-- 法二
+SELECT *
+FROM student
+WHERE EXTRACT(year FROM sage) = '1990'  
+```
+
+-- EXTRACT函数——截取日期元素，只能用在mysql和postgresql中
+
+EXTRACT(日期元素 FROM 日期）
+
+ 25.查询每门课程的平均成绩，结果按平均成绩降序排列，平均成绩相同时，按课程编号升序排列 
+
+```text
+SELECT cid, avg(score) as avg_sc
+FROM sc
+GROUP BY cid
+ORDER BY avg_sc DESC, cid ASC;
+```
+
+ 26.查询平均成绩大于等于 85 的所有学生的学号、姓名和平均成绩 
+
+```text
+SELECT s1.sid,sname,t1.平均成绩
+FROM student s1
+JOIN 
+(SELECT sid,avg(score) as 平均成绩
+FROM sc 
+GROUP BY sid
+HAVING avg(score) >= 85)t1
+ON s1.sid = t1.sid;
+```
+
+```text
+-- 法二
+SELECT s1.sid, sname, avg(score) as 平均成绩
+FROM sc s1,
+     student s2
+WHERE s1.sid = s2.sid
+GROUP BY s1.sid
+HAVING avg(score) >=85;
+```
+
+***其实上面很多题多可以不用子查询的方法，直接在FROM 上面写两张表，然后联结，这个是ORACLE的写法，但是如果条件一旦很多的时候就容易疏漏；\***
+
+***子查询的方法，感觉更有层次和逻辑，但是如果做多层嵌套的子查询会降低SQL的性能\***
+
+***各有优劣，大家自行选择啦\***
+
+ 27.查询课程名称为「数学」，且分数低于 60 的学生姓名和分数 
+
+```text
+SELECT sname,t1.score
+FROM student s1
+JOIN
+(SELECT sid,score
+FROM sc
+WHERE cid =
+(SELECT cid
+FROM course 
+WHERE cname = '数学')
+AND score < 60)t1
+ON s1.sid = t1.sid
+```
+
+```text
+-- 法二
+SELECT c.cname, s1.sname, s2.score
+FROM course c,
+     student s1,
+     sc s2
+WHERE c.cid = s2.cid
+     AND s1.sid = s2.sid 
+     AND c.cname = '数学'
+     AND s2.score < 60;
+```
+
+ 28.查询所有学生的课程及分数情况（存在学生没成绩，没选课的情况 
+
+```text
+SELECT s1.*,s2.cid,s2.score
+FROM student s1
+LEFT JOIN sc s2
+ON s1.sid = s2.sid
+```
+
+ 30.查询存在不及格的课程 
+
+```text
+SELECT t1.cid,cname, t1.score
+FROM course c
+JOIN 
+(SELECT cid,score
+FROM sc
+WHERE score <60)t1
+ON c.cid = t1.cid
+```
+
+ 31.查询课程编号为 01 且课程成绩在 80 分及以上的学生的学号和姓名 
+
+```text
+SELECT sid,sname
+FROM student
+WHERE sid IN
+(SELECT sid
+FROM sc
+WHERE score >= 80
+      AND cid ='01')
+```
+
+  32.求每门课程的学生人数 
+
+```text
+SELECT cid, count(sid) AS 学生人数
+FROM sc
+GROUP BY cid
+```
+
+33. 成绩不重复，查询选修「张三」老师所授课程的学生中，成绩最高的学生信息及其成绩 
+
+```text
+SELECT DISTINCT s.*,t1.最高分
+FROM student s
+JOIN 
+(SELECT sid,max(score) as 最高分
+FROM sc
+WHERE cid =
+(SELECT cid
+FROM course
+WHERE tid =
+(SELECT tid
+FROM teacher
+WHERE tname = '张三')))t1
+ON s.sid = t1.sid
+```
+
+ 34.成绩有重复的情况下，查询选修「张三」老师所授课程的学生中，成绩最高的学生信息及其成绩 
+
+```text
+SELECT  s.*,t1.最高分
+FROM student s
+JOIN 
+(SELECT sid,max(score) as 最高分
+FROM sc
+WHERE cid =
+(SELECT cid
+FROM course
+WHERE tid =
+(SELECT tid
+FROM teacher
+WHERE tname = '张三')))t1
+ON s.sid = t1.sid
+```
+
+ 35.查询不同课程成绩相同的学生的学生编号、课程编号、学生成绩 
+
+```text
+SELECT s1.sid, s1.cid, s1.score
+FROM sc s1
+JOIN sc s2
+ON s1.sid = s2.sid AND s1.cid <> s2.cid AND s1.score = s2.score
+GROUP BY s1.sid, s1.cid 
+```
+
+ 36.查询每门功成绩最好的前两名 
+
+```text
+SELECT  a.CId, a.SId, a.score
+FROM sc a
+LEFT JOIN sc b 
+ON  a.CId = b.CId 
+    AND a.score < b.score
+GROUP BY a.CId , a.SId
+HAVING COUNT(a.CId) < 2
+ORDER BY CId , score DESC
+```
+
+ 统计每门课程的学生选修人数（超过 5 人的课程才统计） 
+
+```text
+SELECT 	cid,count(sid)
+FROM sc
+GROUP BY cid
+HAVING count(sid) >5
+```
+
+ 检索至少选修两门课程的学生学号 
+
+```text
+SELECT sid,COUNT(cid)
+FROM sc
+GROUP BY sid
+HAVING COUNT(cid) >=2
+```
+
+ 查询选修了全部课程的学生信息 
+
+```text
+SELECT *
+FROM student
+WHERE sid IN
+(SELECT sid
+FROM sc
+GROUP BY sid 
+HAVING count(cid) =
+(SELECT count(cid)
+FROM course))
+```
+
+ 40-41.查询各学生的年龄，只按年份来算 
+
+```text
+SELECT sid, sname, ssex, extract(year from CURRENT_DATE) - extract(year from sage) as age
+from student
+```
+
+ SELECT current_date; 可以获得当前日期， 日期合适是yyyy--mm--dd 
+
+ 42.查询本周过生日的学生 
+
+```text
+SELECT sid 
+FROM  student
+WHERE WEEKOFYEAR(current_date) = WEEKOFYEAR(sage)
+```
+
+ 关于mysql中weekofyear相关函数的解释，以下链接中有解释 
+
+43. 查询下周过生日的学生 
+
+```text
+SELECT sid 
+FROM  student
+WHERE WEEKOFYEAR(current_date) + 1 = WEEKOFYEAR(sage)
+```
+
+ 44.查询本月过生日的学生 
+
+```text
+SELECT *
+from student
+WHERE extract(month from CURRENT_DATE) = extract(month from sage) 
+```
+
+```text
+-- 法二
+SELECT *
+FROM student
+WHERE MONTH(Sage) = MONTH(current_date);
+```
+
+ 45.查询下月过生日的学生 
+
+```text
+SELECT *
+from student
+WHERE extract(month from CURRENT_DATE) + 1 = extract(month from sage) 
+```
